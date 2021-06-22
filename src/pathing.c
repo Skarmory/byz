@@ -6,7 +6,6 @@
 #include "map_cell.h"
 #include "map_location.h"
 #include "movement.h"
-#include "util.h"
 
 #include <float.h>
 #include <math.h>

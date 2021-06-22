@@ -16,6 +16,7 @@
 #include "spell_effect.h"
 #include "term.h"
 #include "ui.h"
+#include "ui_map.h"
 #include "ui_menu.h"
 #include "util.h"
 
@@ -132,6 +133,12 @@ int main(int argc, char** argv)
     int map_height = 3;
     g_cmap = map_new(map_width, map_height);
     gen_map(g_cmap, MAPTYPE_DUNGEON);
+
+    int map_ui_size_x = 0;
+    int map_ui_size_y = 0;
+    int map_ui_size_w = 80;
+    int map_ui_size_h = 40;
+    g_ui->ui_map = ui_map_new(map_ui_size_x, map_ui_size_y, map_ui_size_w, map_ui_size_h, g_cmap);
 
     mon_set_stat(g_you->mon, STAT_TYPE_HP_MAX, 999);
     mon_set_stat(g_you->mon, STAT_TYPE_HP, 999);

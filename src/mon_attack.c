@@ -19,10 +19,6 @@ struct AttackMethod* g_attack_methods = NULL;
 int g_attack_methods_count = 0;
 
 const int c_certain_miss_threshold = 5;
-const int c_certain_hit_threshold = 95;
-const int c_attack_power_divisor  = 12;
-const int c_armour_value_divisor  = 50;
-const int c_armour_value_log_base = 5;
 
 enum AttackResult
 {

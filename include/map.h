@@ -23,8 +23,6 @@ struct Map
     struct List cell_list;
 };
 
-void display_map(void);
-
 struct Map* map_new(int width, int height);
 void map_free(struct Map* map);
 

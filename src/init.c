@@ -126,6 +126,25 @@ void _uninit_gamedata(void)
     g_attack_methods_count = 0;
 }
 
+#include "ui.h"
+#include "ui_map.h"
+static bool _init_ui(void)
+{
+    g_ui = malloc(sizeof(struct UI));
+
+    // TODO: Define things in data for easy configuration
+    //struct UIMap* ui_map = ui_map_new(0, 0, 25, 25, NULL);
+
+    return true;
+}
+
+static void _uninit_ui(void)
+{
+    ui_map_free(g_ui->ui_map);
+    free(g_ui);
+    g_ui = NULL;
+}
+
 bool init_yun(void)
 {
     srand(time(NULL));
@@ -147,6 +166,11 @@ bool init_yun(void)
         return false;
     }
 
+    if(!_init_ui())
+    {
+        return false;
+    }
+
     init_console_commands();
 
     return true;
@@ -155,6 +179,7 @@ bool init_yun(void)
 void uninit_yun(void)
 {
     uninit_console_commands();
+    _uninit_ui();
     _uninit_gamedata();
     tasker_free(g_tasker);
     term_uninit();

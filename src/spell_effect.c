@@ -3,7 +3,6 @@
 
 #include "list.h"
 #include "monster.h"
-#include "util.h"
 
 #include <stddef.h>
 #include <string.h>

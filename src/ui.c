@@ -13,14 +13,17 @@
 #include "player.h"
 #include "player_class.h"
 #include "term.h"
+#include "ui_map.h"
 #include "util.h"
 
 #include <stdio.h>
 #include <string.h>
 
 #define STATUS_X 0
-#define STATUS_Y 44
+#define STATUS_Y 45
 #define STATUS_W 80
+
+struct UI* g_ui = NULL;
 
 void draw_textbox(int x, int y, int w, int h, struct Colour* fg, struct Colour* bg, const char* text)
 {
@@ -122,7 +125,7 @@ char prompt_choice(const char* title, char** choices, int length)
 
 void display_main_screen(void)
 {
-    display_map();
+    ui_map_draw(g_ui->ui_map);
     display_char_status();
 }
 

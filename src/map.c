@@ -5,6 +5,7 @@
 #include "gameplay_commands.h"
 #include "input_keycodes.h"
 #include "log.h"
+#include "math_utils.h"
 #include "map_cell.h"
 #include "map_location.h"
 #include "monster.h"
@@ -14,7 +15,6 @@
 #include "pathing.h"
 #include "symbol.h"
 #include "term.h"
-#include "util.h"
 
 #include <stdlib.h>
 
@@ -203,68 +203,4 @@ bool map_is_in_view_bounds(struct Map* map, int x, int y)
     int ymax = clamp(g_you->mon->y + (MROWS/2), 0, (map->height * g_map_cell_height) + MROWS - 1);
 
     return (x >= xmin && x < xmax) && (y >= ymin && y < ymax);
-}
-
-/**
- * Draw map
- */
-void display_map(void)
-{
-    int xstart = clamp(g_you->mon->x - (MCOLS/2), 0, (g_cmap->width * g_map_cell_width) - MCOLS - 1);
-    int ystart = clamp(g_you->mon->y - (MROWS/2), 0, (g_cmap->height * g_map_cell_height) - MROWS - 1);
-
-    int i = 0;
-    for(int x = xstart; i < MCOLS; ++x, ++i)
-    {
-        int j = 0;
-        for(int y = ystart; j < MROWS; ++y, ++j)
-        {
-            struct MapLocation* loc = map_get_location(g_cmap, x, y);
-
-            if(!mon_can_see(g_you->mon, x, y))
-            {
-                if(loc->seen)
-                {
-                    if(loc->feature)
-                    {
-                        term_draw_symbol(i, j, COL(CLR_FOG_OF_WAR), COL(CLR_DEFAULT), 0, loc->feature->symbol->sym);
-                    }
-                    else
-                    {
-                        term_draw_symbol(i, j, COL(CLR_FOG_OF_WAR), COL(CLR_DEFAULT), 0, loc->symbol.sym);
-                    }
-                }
-                else
-                {
-                    term_draw_symbol(i, j, COL(CLR_DEFAULT), COL(CLR_DEFAULT), 0, ' ');
-                }
-            }
-            else
-            {
-                loc->seen = true;
-
-                if(loc->mon)
-                {
-                    // Draw mon
-                    term_draw_symbol(i, j, &loc->mon->type->symbol->fg, &loc->mon->type->symbol->bg, loc->mon->type->symbol->attr, loc->mon->type->symbol->sym);
-                }
-                else if(loc_has_obj(loc))
-                {
-                    // Draw object
-                    struct Object* obj = loc_get_obj(loc);
-                    term_draw_symbol(i, j, &obj->symbol->fg, &obj->symbol->bg, obj->symbol->attr, obj->symbol->sym);
-                }
-                else if(loc->feature)
-                {
-                    // Draw feature
-                    term_draw_symbol(i, j, &loc->feature->symbol->fg, &loc->feature->symbol->bg, loc->feature->symbol->attr, loc->feature->symbol->sym);
-                }
-                else
-                {
-                    // Draw base floor
-                    term_draw_symbol(i, j, &loc->symbol.fg, &loc->symbol.bg, loc->symbol.attr, loc->symbol.sym);
-                }
-            }
-        }
-    }
 }
