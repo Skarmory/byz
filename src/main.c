@@ -83,6 +83,7 @@ void main_loop(void)
     // Basic implementation for debugging
 
     display_main_screen();
+    term_refresh();
 
     do
     {
