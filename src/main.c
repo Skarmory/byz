@@ -48,6 +48,8 @@ int main(int argc, char** argv)
     struct string* s = string_new("Hello world!\n");
 
     string_printf(s);
+    printf("Hello world!\n");
+
 
     return 0;
 }

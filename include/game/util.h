@@ -5,8 +5,6 @@
 
 void convert_arg(char c, char* buf);
 
-int strrfindi(const char* haystack, const char needle, size_t start);
-
 void do_quit(void);
 
 void sigint_handler(int _);

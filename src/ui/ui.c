@@ -13,6 +13,7 @@
 #include "core/term.h"
 #include "ui/ui_map.h"
 #include "game/util.h"
+#include "core/string.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -25,10 +26,13 @@ struct UI* g_ui = NULL;
 
 void draw_textbox(int x, int y, int w, int h, struct Colour* fg, struct Colour* bg, const char* text)
 {
+    struct string text_str;
+    string_init(&text_str, text);
+
     term_draw_area(x, y, w, h, fg, bg, 0, ' ');
 
     int stridx   = 0;
-    int textlen  = strlen(text);
+    int textlen = string_size(&text_str);
 
     // Print text
     while(stridx < textlen)
@@ -36,7 +40,7 @@ void draw_textbox(int x, int y, int w, int h, struct Colour* fg, struct Colour* 
         int chars = w;
         if((stridx + w) < textlen)
         {
-            chars = strrfindi(text, ' ', stridx + w);
+            chars = string_rfindi(&text_str, ' ', stridx + w);
 
             if(chars == -1)
             {
