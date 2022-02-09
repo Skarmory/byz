@@ -1,8 +1,8 @@
-# List of armour found in Yun.
+# List of armours.
 
 # INFO
 # Armours are items that occupy one of the following slots:
-# head, shoulderss, chest, hands, legs, feet, or offhand (shields)
+# head, shoulders, chest, hands, legs, feet, or offhand (shields)
 
 # USAGE
 # Each entry is comprised of standard key-value pair fields.

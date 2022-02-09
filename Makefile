@@ -1,10 +1,14 @@
 CC=gcc
 CFLAGS=-Wall -Wextra -Iinclude
 LDFLAGS=-lm -pthread
-GAME=yun
+GAME=byzantium
 
 INCL=$(wildcard include/*.h)
-SRCS=$(wildcard src/*.c)
+SRCS=$(wildcard src/*.c src/core/*.c src/game/*.c src/ui/*.c)
+#SRCS_CORE=$(wildcard src/core/*.c)
+#SRCS_GAME=$(wildcard src/game/*.c)
+#SRCS_UI=$(wildcard src/ui/*.c)
+
 OBJS=$(SRCS:.c=.o)
 DEPS=$(SRCS:.c=.d)
 
