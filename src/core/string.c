@@ -15,6 +15,7 @@ struct string* string_new(const char* initial)
 
 void string_free(struct string* str)
 {
+    string_uninit(str);
     free(str);
 }
 
