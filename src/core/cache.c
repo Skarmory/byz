@@ -1,17 +1,17 @@
 #include "core/cache.h"
 
 #include <assert.h>
-#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include <stdio.h>
 
+const int NULL_CACHE_HANDLE = 0xffffffff;
+
 static const int cs_idx_mask     = 0b00000000000000001111111111111111; // <<  0
 static const int cs_key_mask     = 0b01111111111111110000000000000000; // << 16
 static const int cs_invalid_mask = 0b10000000000000000000000000000000; // << 31
 static const int cs_valid_mask   = 0b01111111111111111111111111111111;
-static const int cs_null_handle  = cs_invalid_mask | cs_key_mask | cs_idx_mask;
 
 static const int cs_key_shift = 16;
 
@@ -77,7 +77,7 @@ static bool _points_to_null(int handle)
  */
 static int _next_handle(struct cache* cache)
 {
-    int handle = cs_null_handle;
+    int handle = NULL_CACHE_HANDLE;
     int key = cs_key_mask;
     int idx = cs_idx_mask;
 
@@ -138,13 +138,6 @@ static bool _check_valid(int handle)
     return (handle & cs_invalid_mask) == 0;
 }
 
-// Check if the key generation for a handle matches what the cache is holding
-// If false, the slot has been freed and reused
-static bool _check_stale(struct cache* cache, int handle)
-{
-    return _get_key(handle) != _get_key(cache->handles[_get_idx(handle)]);
-}
-
 // Checks whether the handle passed in by other code matches the handle the cache is expecting
 static bool _check_handle(struct cache* cache, int handle)
 {
@@ -160,7 +153,7 @@ static bool _check_handle(struct cache* cache, int handle)
         return false;
     }
 
-    if(_check_stale(cache, handle))
+    if(cache_stale_handle(cache, handle))
     {
         return false;
     }
@@ -218,10 +211,10 @@ struct cache* cache_new(int item_size, int capacity, free_function free_func)
     cache->handles   = malloc(sizeof(int) * capacity);
     cache->item_size = item_size;
     cache->capacity  = capacity;
-    cache->free_head = cs_null_handle;
+    cache->free_head = NULL_CACHE_HANDLE;
     cache->free_func = free_func;
 
-    memset(cache->handles, cs_null_handle, sizeof(int) * capacity);
+    memset(cache->handles, NULL_CACHE_HANDLE, sizeof(int) * capacity);
 
     return cache;
 }
@@ -250,9 +243,26 @@ int cache_size(struct cache* cache)
     return cache->current_used;
 }
 
+int cache_capacity(struct cache* cache)
+{
+    return cache->capacity;
+}
+
+int cache_item_size(struct cache* cache)
+{
+    return cache->item_size;
+}
+
 int cache_used(struct cache* cache)
 {
     return cache->max_used;
+}
+
+// Check if the key generation for a handle matches what the cache is holding
+// If false, the slot has been freed and reused
+bool cache_stale_handle(struct cache* cache, int handle)
+{
+    return _get_key(handle) != _get_key(cache->handles[_get_idx(handle)]);
 }
 
 int cache_add(struct cache* cache, void* item)
