@@ -63,30 +63,6 @@ struct MapCell* map_get_cell_by_world_coord(struct Map* map, int x, int y)
     return NULL;
 }
 
-struct MapCell* map_get_cell_by_map_coord(struct Map* map, int x, int y)
-{
-    struct ListNode* node = NULL;
-    list_for_each(&map->cell_list, node)
-    {
-        struct MapCell* cell = node->data;
-        if(cell->cell_x == x && cell->cell_y == y)
-        {
-            return cell;
-        }
-    }
-
-    return NULL;
-}
-
-void map_get_screen_coord_by_world_coord(struct Map* map, int world_x, int world_y, int* screen_x, int* screen_y)
-{
-    int xstart = clamp(g_cx - (MCOLS/2), 0, (map->width * g_map_cell_width) - MCOLS - 1);
-    int ystart = clamp(g_cy - (MROWS/2), 0, (map->height * g_map_cell_height) - MROWS - 1);
-
-    *screen_x = world_x - xstart;
-    *screen_y = world_y - ystart;
-}
-
 struct MapLocation* map_get_location(struct Map* map, int x, int y)
 {
     struct MapCell* cell = map_get_cell_by_world_coord(map, x, y);
@@ -98,110 +74,7 @@ struct MapLocation* map_get_location(struct Map* map, int x, int y)
     return map_cell_get_location(cell, x, y);
 }
 
-struct MapLocation* map_get_location_offset_by_direction(struct Map* map, struct MapLocation* loc, int input_keycode)
+bool map_in_bounds(struct Map* map, int x, int y)
 {
-    int x_off = 0;
-    int y_off = 0;
-
-    switch((enum KeyCode)input_keycode)
-    {
-        case GAMEPLAY_COMMAND_MOVE_LEFT:
-        {
-            x_off = -1;
-            break;
-        }
-        case GAMEPLAY_COMMAND_MOVE_RIGHT:
-        {
-            x_off = 1;
-            break;
-        }
-        case GAMEPLAY_COMMAND_MOVE_UP:
-        {
-            y_off = -1;
-            break;
-        }
-        case GAMEPLAY_COMMAND_MOVE_DOWN:
-        {
-            y_off = 1;
-            break;
-        }
-        case GAMEPLAY_COMMAND_MOVE_LEFT_UP:
-        {
-            x_off = -1;
-            y_off = -1;
-            break;
-        }
-        case GAMEPLAY_COMMAND_MOVE_LEFT_DOWN:
-        {
-            x_off = -1;
-            y_off = 1;
-            break;
-        }
-        case GAMEPLAY_COMMAND_MOVE_RIGHT_UP:
-        {
-            x_off = 1;
-            y_off = -1;
-            break;
-        }
-        case GAMEPLAY_COMMAND_MOVE_RIGHT_DOWN:
-        {
-            x_off = 1;
-            y_off = 1;
-            break;
-        }
-        default:
-        {
-            break;
-        }
-    }
-
-    const int newx = loc->x + x_off;
-    const int newy = loc->y + y_off;
-
-    //struct MapCell* cell = map_get_cell_by_world_coord(map, newx, newy);
-    //if(!cell)
-    //{
-    //    return NULL;
-    //}
-
-    return map_get_location(map, newx, newy);
-}
-
-bool map_add_mon(struct Map* map, struct Mon* mon, int x, int y)
-{
-    struct MapCell* cell = map_get_cell_by_world_coord(map, x, y);
-    if(!cell)
-    {
-        return false;
-    }
-
-    map_cell_add_mon(cell, mon);
-
-    return true;
-}
-
-bool map_has_mon(struct Map* map, int x, int y)
-{
-    struct MapLocation* loc = map_get_location(map, x, y);
-
-    return loc->mon != NULL;
-}
-
-bool map_is_in_bounds(struct Map* map, int x, int y)
-{
-    struct MapCell* cell = map_get_cell_by_world_coord(map, x, y);
-
-    return cell != NULL;
-}
-
-// TODO: Replace with proper map view functionality
-bool map_is_in_view_bounds(struct Map* map, int x, int y)
-{
-    int xmin = clamp(g_cx - (MCOLS/2), 0, (map->width * g_map_cell_width) - MCOLS - 1);
-    int ymin = clamp(g_cy - (MROWS/2), 0, (map->height * g_map_cell_height) - MROWS - 1);
-
-    int xmax = clamp(g_cx + (MCOLS/2), 0, (map->width * g_map_cell_width) + MCOLS - 1);
-    int ymax = clamp(g_cy + (MROWS/2), 0, (map->height * g_map_cell_height) + MROWS - 1);
-
-    return (x >= xmin && x < xmax) && (y >= ymin && y < ymax);
+    return map_get_location(map, x, y) != NULL;
 }
