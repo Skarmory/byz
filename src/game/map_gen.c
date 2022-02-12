@@ -17,12 +17,17 @@
 #include <stdlib.h>
 #include <string.h>
 
-void gen_map(struct Map* map, enum MapType type)
+void gen_map_cell(struct MapCell* cell)
+{
+}
+
+void gen_map(struct Map* map)
 {
     for(int x = 0; x < map->width; ++x)
     for(int y = 0; y < map->height; ++y)
     {
         struct MapCell* cell = map_cell_new(x, y);
+        gen_map_cell(cell);
         list_add(&map->cell_list, cell);
     }
 }
