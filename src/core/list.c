@@ -89,6 +89,28 @@ void list_add(struct List* list, void* data)
     _add_node(list, node);
 }
 
+void list_add_head(struct List* list, void* data)
+{
+    struct ListNode* node = malloc(sizeof(struct ListNode));
+    node->data = data;
+    node->next = NULL;
+    node->prev = NULL;
+
+    if(list->head)
+    {
+        node->next = list->head;
+        list->head->prev = node;
+        list->head = node;
+    }
+    else
+    {
+        list->head = node;
+        list->tail = node;
+    }
+
+    ++list->count;
+}
+
 void list_rm(struct List* list, struct ListNode* node)
 {
     if(!node)
@@ -146,4 +168,88 @@ void* list_peek_tail(const struct List* list)
 bool list_empty(const struct List* list)
 {
     return list->count == 0;
+}
+
+static void _sort(struct List* list, sort_func func)
+{
+    if(list->count <= 1)
+    {
+        return;
+    }
+
+    // Step 1: Split the top level list up into 2 sublists of equal(ish) size
+    struct List left;
+    struct List right;
+    list_init(&left);
+    list_init(&right);
+
+    const int count = list->count;
+    const int half_count = count/2;
+    struct ListNode* node = list->head;
+    struct ListNode* node_next = list->head->next;
+
+    for(int i = 0; i < count; ++i)
+    {
+        if(i < half_count)
+        {
+            list_splice_node(list, &left, node);
+        }
+        else
+        {
+            list_splice_node(list, &right, node);
+        }
+
+        node = node_next;
+        if(node_next)
+        {
+            node_next = node_next->next;
+        }
+    }
+
+    // Step 2: Recurse the lists
+    _sort(&left, func);
+    _sort(&right, func);
+
+    // Step 3: Compare the left and right list and splice them back onto the top level list
+    struct ListNode* left_it = left.head;
+    struct ListNode* right_it = right.head;
+    while(left_it != NULL || right_it != NULL)
+    {
+        bool left_right = true;
+        if(left_it && right_it)
+        {
+            // Both lists valid, so use compare function
+            left_right = func(left_it->data, right_it->data);
+        }
+        else
+        {
+            // One of the lists is invalid, so check which is null to determine which to splice
+            left_right = left_it != NULL;
+        }
+
+        if(left_right)
+        {
+            // Splict from left
+            struct ListNode* n = left_it;
+            left_it = left_it->next;
+            list_splice_node(&left, list, n);
+        }
+        else
+        {
+            // Splice from right
+            struct ListNode* n = right_it;
+            right_it = right_it->next;
+            list_splice_node(&right, list, n);
+        }
+    }
+}
+
+void list_sort(struct List* list, sort_func func)
+{
+    if(list->count == 0 || list->count == 1)
+    {
+        return;
+    }
+
+    _sort(list, func);
 }
