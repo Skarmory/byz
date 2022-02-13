@@ -209,7 +209,6 @@ void term_refresh(void)
     struct VTermSymbol* sym = NULL;
     int lx = -1;
     int ly = -1;
-    int nomove=0;
 
     for(int y = 0; y < vterm->height; ++y)
     for(int x = 0; x < vterm->width; ++x)
@@ -226,24 +225,18 @@ void term_refresh(void)
         {
             term_move_cursor(x, y);
         }
-        else
-        {
-            nomove++;
-        }
 
-        lx = x; ly = y;
+        lx = x;
+        ly = y;
 
         // Set attributes
+        _writef(c_attribute_format, A_NONE);
         if(sym->ta_flags != A_NONE_BIT)
         {
             if(sym->ta_flags & A_BOLD_BIT)       _writef(c_attribute_format, A_BOLD);
             if(sym->ta_flags & A_UNDERSCORE_BIT) _writef(c_attribute_format, A_UNDERSCORE);
             if(sym->ta_flags & A_BLINK_BIT)      _writef(c_attribute_format, A_BLINK);
             if(sym->ta_flags & A_REVERSE_BIT)    _writef(c_attribute_format, A_REVERSE);
-        }
-        else
-        {
-            _writef(c_attribute_format, A_NONE);
         }
 
         // Set colours
@@ -266,8 +259,6 @@ void term_refresh(void)
 
         sym->redraw = false;
     }
-
-    log_format_msg(LOG_DEBUG, "did not move term cursor: %d", nomove);
 
     // Reset term attributes
     _writef(c_default);
@@ -306,7 +297,7 @@ void term_unset_attr(int x, int y, TextAttributeFlags ta_flags)
 {
     struct VTermSymbol* sym = _term_get_symbol(x, y);
 
-    if((sym->ta_flags | ta_flags) == sym->ta_flags)
+    if((sym->ta_flags | ta_flags) != sym->ta_flags)
     {
         sym->ta_flags &= ~ta_flags;
         sym->redraw = true;
