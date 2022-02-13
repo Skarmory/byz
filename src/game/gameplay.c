@@ -18,7 +18,6 @@
 #include "game/mon_type.h"
 #include "game/object.h"
 #include "ui/ui.h"
-#include "ui/ui_stats.h"
 #include "game/util.h"
 
 #include <stddef.h>
@@ -95,22 +94,22 @@ void gameplay_turn(void)
             case GAMEPLAY_COMMAND_MOVE_RIGHT_UP:
             case GAMEPLAY_COMMAND_MOVE_RIGHT_DOWN:
             {
-                struct MapLocation* you_loc = map_get_location(g_cmap, g_cx, g_cy);
-                if(!you_loc)
-                {
-                    break;
-                }
+                //struct MapLocation* you_loc = map_get_location(g_cmap, g_cx, g_cy);
+                //if(!you_loc)
+                //{
+                //    break;
+                //}
 
-                struct MapLocation* target = map_get_location_offset_by_direction(g_cmap, you_loc, cmd);
-                if(!target)
-                {
-                    break;
-                }
+                //struct MapLocation* target = map_get_location_offset_by_direction(g_cmap, you_loc, cmd);
+                //if(!target)
+                //{
+                //    break;
+                //}
 
-                g_cx = target->x;
-                g_cy = target->y;
+                //g_cx = target->x;
+                //g_cy = target->y;
 
-                //end_turn = _do_smart_action(target);
+                ////end_turn = _do_smart_action(target);
                 break;
             }
             case GAMEPLAY_COMMAND_PASS_TURN:
