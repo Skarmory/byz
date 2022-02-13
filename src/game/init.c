@@ -35,37 +35,37 @@ static inline bool _init_symbols(void)
 
 static inline bool _init_gamedata(void)
 {
-    log_msg(LOG_DEBUG, "parsing attack types");
-    if(parse_attack_methods() != PARSER_OK)
-    {
-        log_msg(LOG_DEBUG, "parsing failed");
-        return false;
-    }
-    log_msg(LOG_DEBUG, "parsing complete");
+    //log_msg(LOG_DEBUG, "parsing attack types");
+    //if(parse_attack_methods() != PARSER_OK)
+    //{
+    //    log_msg(LOG_DEBUG, "parsing failed");
+    //    return false;
+    //}
+    //log_msg(LOG_DEBUG, "parsing complete");
 
-    log_msg(LOG_DEBUG, "parsing armours");
-    if(parse_armours() != PARSER_OK)
-    {
-        log_msg(LOG_DEBUG, "parsing failed");
-        return false;
-    }
-    log_msg(LOG_DEBUG, "parsing complete");
+    //log_msg(LOG_DEBUG, "parsing armours");
+    //if(parse_armours() != PARSER_OK)
+    //{
+    //    log_msg(LOG_DEBUG, "parsing failed");
+    //    return false;
+    //}
+    //log_msg(LOG_DEBUG, "parsing complete");
 
-    log_msg(LOG_DEBUG, "parsing weapons");
-    if(parse_weapons() != PARSER_OK)
-    {
-        log_msg(LOG_DEBUG, "parsing failed");
-        return false;
-    }
-    log_msg(LOG_DEBUG, "parsing complete");
+    //log_msg(LOG_DEBUG, "parsing weapons");
+    //if(parse_weapons() != PARSER_OK)
+    //{
+    //    log_msg(LOG_DEBUG, "parsing failed");
+    //    return false;
+    //}
+    //log_msg(LOG_DEBUG, "parsing complete");
 
-    log_msg(LOG_DEBUG, "parsing mon types");
-    if(parse_mon_types() != PARSER_OK)
-    {
-        log_msg(LOG_DEBUG, "parsing failed");
-        return false;
-    }
-    log_msg(LOG_DEBUG, "parsing complete");
+    //log_msg(LOG_DEBUG, "parsing mon types");
+    //if(parse_mon_types() != PARSER_OK)
+    //{
+    //    log_msg(LOG_DEBUG, "parsing failed");
+    //    return false;
+    //}
+    //log_msg(LOG_DEBUG, "parsing complete");
 
     log_msg(LOG_DEBUG, "parsing features");
     if(parse_features() != PARSER_OK)
@@ -73,7 +73,7 @@ static inline bool _init_gamedata(void)
         log_msg(LOG_DEBUG, "parsing failed");
         return false;
     }
-    log_msg(LOG_DEBUG, "parsing complete");
+    //log_msg(LOG_DEBUG, "parsing complete");
 
     return true;
 }
@@ -106,23 +106,6 @@ void _uninit_gamedata(void)
     g_attack_methods_count = 0;
 }
 
-static bool _init_ui(void)
-{
-    g_ui = malloc(sizeof(struct UI));
-
-    // TODO: Define things in data for easy configuration
-    //struct UIMap* ui_map = ui_map_new(0, 0, 25, 25, NULL);
-
-    return true;
-}
-
-static void _uninit_ui(void)
-{
-    ui_map_free(g_ui->ui_map);
-    free(g_ui);
-    g_ui = NULL;
-}
-
 bool init_main(void)
 {
     srand(time(NULL));
@@ -144,11 +127,6 @@ bool init_main(void)
         return false;
     }
 
-    if(!_init_ui())
-    {
-        return false;
-    }
-
     init_console_commands();
 
     return true;
@@ -157,7 +135,6 @@ bool init_main(void)
 void uninit_main(void)
 {
     uninit_console_commands();
-    _uninit_ui();
     _uninit_gamedata();
     tasker_free(g_tasker);
     term_uninit();
