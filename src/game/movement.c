@@ -37,7 +37,6 @@ static inline bool _move_is_valid(struct MapLocation* loc, MonAttrMoveFlags move
 
 bool move_is_valid(int destx, int desty, MonAttrMoveFlags move_flags)
 {
-    //struct MapCell* cell = map_get_cell_by_world_coord(g_cmap, destx, desty);
     struct MapLocation* loc = map_get_location(g_cmap, destx, desty);
     if(!loc)
     {
