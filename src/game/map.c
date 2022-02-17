@@ -63,6 +63,22 @@ struct MapCell* map_get_cell_by_world_coord(struct Map* map, int x, int y)
     return NULL;
 }
 
+struct MapCell* map_get_cell_by_cell_coord(struct Map* map, int x, int y)
+{
+    struct ListNode* node = NULL;
+    list_for_each(&map->cell_list, node)
+    {
+        struct MapCell* cell = node->data;
+
+        if(cell->cell_x == x && cell->cell_y == y)
+        {
+            return cell;
+        }
+    }
+
+    return NULL;
+}
+
 struct MapLocation* map_get_location(struct Map* map, int x, int y)
 {
     struct MapCell* cell = map_get_cell_by_world_coord(map, x, y);

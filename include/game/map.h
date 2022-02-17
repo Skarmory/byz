@@ -27,6 +27,7 @@ struct Map* map_new(int width, int height);
 void map_free(struct Map* map);
 
 struct MapCell* map_get_cell_by_world_coord(struct Map* map, int x, int y);
+struct MapCell* map_get_cell_by_cell_coord(struct Map* map, int x, int y);
 
 struct MapLocation* map_get_location(struct Map* map, int x, int y);
 
