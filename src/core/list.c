@@ -198,12 +198,22 @@ void* list_pop_head(struct List* list)
 
 void* list_peek_head(const struct List* list)
 {
-    return list->head->data;
+    if(list->head)
+    {
+        return list->head->data;
+    }
+
+    return NULL;
 }
 
 void* list_peek_tail(const struct List* list)
 {
-    return list->tail->data;
+    if(list->tail)
+    {
+        return list->tail->data;
+    }
+
+    return NULL;
 }
 
 bool list_empty(const struct List* list)
