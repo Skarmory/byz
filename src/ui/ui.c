@@ -126,7 +126,7 @@ char prompt_choice(const char* title, char** choices, int length)
 
 void display_main_screen(void)
 {
-    ui_map_draw(g_cmap, g_camera);
+    ui_map_draw(g_cmap, g_camera, MAP_LAYER_NORMAL);
     display_char_status();
 }
 

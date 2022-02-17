@@ -12,10 +12,11 @@
 #include "game/mon_type.h"
 #include "game/object.h"
 #include "core/term.h"
+#include "game/pathing_node.h"
 
 #include <stdlib.h>
 
-void ui_map_draw(struct Map* map, struct camera* camera)
+void ui_map_draw(struct Map* map, struct camera* camera, enum MAP_LAYER layer)
 {
     for(int screen_i = 0; screen_i < camera->w; ++screen_i)
     for(int screen_j = 0; screen_j < camera->h; ++screen_j)
@@ -27,13 +28,38 @@ void ui_map_draw(struct Map* map, struct camera* camera)
         {
             struct MapLocation* map_location = map_get_location(map, world_x, world_y);
 
-            if(map_location)
+            if(layer == MAP_LAYER_NORMAL)
             {
-                term_draw_symbol(screen_i, screen_j, &map_location->symbol.fg, &map_location->symbol.bg, 0, map_location->symbol.sym);
+                if(map_location)
+                {
+                    term_draw_symbol(screen_i, screen_j, &map_location->symbol.fg, &map_location->symbol.bg, 0, map_location->symbol.sym);
+                }
+                else
+                {
+                    term_draw_symbol(screen_i, screen_j, COL(CLR_FOG_OF_WAR), COL(CLR_DEFAULT), 0, ' ');
+                }
             }
-            else
+            else if(layer == MAP_LAYER_PATHING)
             {
-                term_draw_symbol(screen_i, screen_j, COL(CLR_FOG_OF_WAR), COL(CLR_DEFAULT), 0, ' ');
+                if(map_location)
+                {
+                    if(map_location->pathing->pathing_data.state == PATHING_NODE_STATE_OPEN)
+                    {
+                        term_draw_symbol(screen_i, screen_j, COL(CLR_GREEN), COL(CLR_DEFAULT), 0, 'O');
+                    }
+                    else if(map_location->pathing->pathing_data.state == PATHING_NODE_STATE_CLOSED)
+                    {
+                        term_draw_symbol(screen_i, screen_j, COL(CLR_RED), COL(CLR_DEFAULT), 0, 'X');
+                    }
+                    else
+                    {
+                        term_draw_symbol(screen_i, screen_j, COL(CLR_DGREY), COL(CLR_DEFAULT), 0, '#');
+                    }
+                }
+                else
+                {
+                    term_draw_symbol(screen_i, screen_j, COL(CLR_FOG_OF_WAR), COL(CLR_DEFAULT), 0, ' ');
+                }
             }
         }
     }
