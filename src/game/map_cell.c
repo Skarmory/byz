@@ -4,6 +4,7 @@
 #include "game/feature.h"
 #include "game/monster.h"
 #include "game/object.h"
+#include "game/pathing_node.h"
 #include "game/pathing.h"
 
 #include <stdlib.h>
@@ -34,12 +35,31 @@ struct MapCell* map_cell_new(int cell_x, int cell_y)
         loc->symbol.fg   = *COL(CLR_WHITE);
         loc->symbol.bg   = *COL(CLR_DEFAULT);
         loc->symbol.attr = 0;
-        loc->path_node = new_path_node(loc);
         loc->mon = NULL;
         loc->feature = rock;
-        loc->pathing_flags = PATHING_GROUND;
         loc->seen = false;
         list_init(&loc->obj_list);
+
+        loc->pathing = malloc(sizeof(struct CONNECTIVITY_NODE));
+        connectivity_node_init(loc->pathing, loc->x, loc->y, 0.0f, PATHING_GROUND);
+    }
+
+    // Connect up connectivity nodes
+    for(int i = 0; i < g_map_cell_width; ++i)
+    for(int j = 0; j < g_map_cell_height; ++j)
+    {
+        struct MapLocation* loc = map_cell_get_location_relative(cell, i, j);
+        struct CONNECTIVITY_NODE* node = loc->pathing;
+
+        for(int x = i - 1; x < i + 2; ++x)
+        for(int y = j - 1; y < j + 2; ++y)
+        {
+            struct MapLocation* connection_loc = map_cell_get_location_relative(cell, x, y);
+            if(connection_loc)
+            {
+                connectivity_node_add_connection(node, connection_loc->pathing);
+            }
+        }
     }
 
     return cell;
@@ -71,7 +91,7 @@ void map_cell_free(struct MapCell* cell)
             free(node);
         }
 
-        free(cell->locs[idx].path_node);
+        free(cell->locs[idx].pathing);
     }
 
     free(cell);
