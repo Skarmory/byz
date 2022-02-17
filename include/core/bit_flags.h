@@ -3,7 +3,7 @@
 
 #define BIT_FLAG(x) (1u << x)
 
-#define SET_FLAG(field, flag) (field |= flag)
-#define HAS_FLAG(field, flag) ((field & flag) != 0)
+#define bit_flags_set_flag(field, flag) (field |= flag)
+#define bit_flags_has_flags(field, flag) ((field & flag) != 0)
 
 #endif
