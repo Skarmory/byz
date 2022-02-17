@@ -1,6 +1,7 @@
 #include "game/map_location.h"
 
 #include "game/feature.h"
+#include "game/pathing_node.h"
 
 #include <stddef.h>
 
@@ -62,10 +63,5 @@ struct List* loc_get_objs(struct MapLocation* loc)
 
 PathingFlags loc_get_pathing(struct MapLocation* loc)
 {
-    if(loc->feature)
-    {
-        return loc->feature->pathing_flags;
-    }
-
-    return loc->pathing_flags;
+    return loc->pathing->pathing_flags;
 }
