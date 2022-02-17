@@ -28,6 +28,8 @@ void             list_add_head(struct List* list, void* data);
 void             list_rm(struct List* list, struct ListNode* node);
 struct ListNode* list_find(struct List* list, void* data);
 void             list_splice_node(struct List* list_from, struct List* list_to, struct ListNode* node);
+void             list_insert_after(struct List* list, void* insert_this, struct ListNode* after_this);
+void             list_insert_before(struct List* list, void* insert_this, struct ListNode* before_this);
 void*            list_pop_head(struct List* list);
 void*            list_peek_head(const struct List* list);
 void*            list_peek_tail(const struct List* list);

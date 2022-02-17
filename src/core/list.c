@@ -146,6 +146,47 @@ void list_splice_node(struct List* list_from, struct List* list_to, struct ListN
     _add_node(list_to, node);
 }
 
+void list_insert_after(struct List* list, void* insert_this, struct ListNode* after_this)
+{
+    struct ListNode* node = malloc(sizeof(struct ListNode));
+    node->data = insert_this;
+    node->next = after_this->next;
+    node->prev = after_this;
+
+    if(after_this->next)
+    {
+        after_this->next->prev = node;
+    }
+    else
+    {
+        list->tail = node;
+    }
+
+    after_this->next = node;
+
+    ++list->count;
+}
+void list_insert_before(struct List* list, void* insert_this, struct ListNode* before_this)
+{
+    struct ListNode* node = malloc(sizeof(struct ListNode));
+    node->data = insert_this;
+    node->next = before_this;
+    node->prev = before_this->prev;
+
+    if(before_this->prev)
+    {
+        before_this->prev->next = node;
+    }
+    else
+    {
+        list->head = node;
+    }
+
+    before_this->prev = node;
+
+    ++list->count;
+}
+
 void* list_pop_head(struct List* list)
 {
     void* data = list->head->data;
