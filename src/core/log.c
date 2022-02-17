@@ -9,6 +9,8 @@ const char* DEBUGLOG_FNAME = "debug.log";
 FILE* msghist_file;
 FILE* debug_file;
 
+static int indent_level = 0;
+
 /**
  * Opens and overwrites all the logging files.
  *
@@ -29,12 +31,22 @@ void log_msg(int logtype, const char* msg)
     {
         case LOG_MSGHIST:
         {
+            for(int i = 0; i < indent_level; ++i)
+            {
+                fprintf(msghist_file, "\t");
+            }
+
             fprintf(msghist_file, "%s\n", msg);
             fflush(msghist_file);
             break;
         }
         case LOG_DEBUG:
         {
+            for(int i = 0; i < indent_level; ++i)
+            {
+                fprintf(debug_file, "\t");
+            }
+
             fprintf(debug_file, "%s\n", msg);
             fflush(debug_file);
             break;
@@ -74,4 +86,17 @@ void uninit_logs(void)
 {
     fclose(msghist_file);
     fclose(debug_file);
+}
+
+void log_push_indent(void)
+{
+    ++indent_level;
+}
+
+void log_pop_indent(void)
+{
+    if(indent_level > 0)
+    {
+        --indent_level;
+    }
 }
