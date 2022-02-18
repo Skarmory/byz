@@ -5,7 +5,6 @@
 
 #include "game/globals.h"
 #include "game/pathing_node.h"
-#include "game/pathing_grid.h"
 #include "game/movement.h"
 
 #include <stddef.h>
@@ -75,7 +74,7 @@ static void _add_open_node(struct CONNECTIVITY_NODE* node)
 
         list_add(&open_list, node);
     }
- 
+
 #ifdef DEBUG_PATHING
     log_pop_indent();
 #endif
@@ -137,7 +136,7 @@ static struct CONNECTIVITY_NODE* _find_path(struct CONNECTIVITY_NODE* dest, Path
                 // This location has not been visited yet
                 // Add to open list
                 node->pathing_data.to   = NULL;
-                node->pathing_data.from = best_node; 
+                node->pathing_data.from = best_node;
 
                 node->pathing_data.cost_from_start = best_node->pathing_data.cost_from_start + 1;
                 node->pathing_data.cost_to_end     = eval_f(node, dest, pather_flags);
