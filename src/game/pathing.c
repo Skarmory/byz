@@ -1,228 +1,248 @@
 #include "game/pathing.h"
 
-#include "game/globals.h"
+#include "core/list.h"
 #include "core/log.h"
-#include "game/map.h"
-#include "game/map_cell.h"
-#include "game/map_location.h"
+
+#include "game/globals.h"
+#include "game/pathing_node.h"
+#include "game/pathing_grid.h"
 #include "game/movement.h"
 
-#include <float.h>
+#include <stddef.h>
 #include <math.h>
-#include <stdlib.h>
 
-struct PathNode* _open_head;
+// TODO: Implement a sorted linked list?
 
-/**
- * Walk back through the linked list and get the first node.
- */
-struct PathNode* _get_first_path_node(struct PathNode* node)
+static int         generation_id = 0;
+static struct List open_list;
+
+static void _add_open_node(struct CONNECTIVITY_NODE* node)
 {
-    if(!node->prev)
+#ifdef DEBUG_PATHING
+    log_format_msg(LOG_DEBUG, "Adding to open list: (%d, %d)", node->x, node->y);
+    log_push_indent();
+#endif
+
+    node->pathing_data.state = PATHING_NODE_STATE_OPEN;
+
+    struct CONNECTIVITY_NODE* comp = list_peek_head(&open_list);
+    if(!comp)
     {
-        return node;
+#ifdef DEBUG_PATHING
+        log_format_msg(LOG_DEBUG, "Open list empty");
+        log_pop_indent();
+#endif
+
+        list_add(&open_list, node);
+        return;
     }
 
-    while(node->prev->prev)
+    if(node->pathing_data.cost_to_end < comp->pathing_data.cost_to_end)
     {
-        node = node->prev;
-    }
+#ifdef DEBUG_PATHING
+        log_format_msg(LOG_DEBUG, "Node more efficient than head, setting to open list head");
+#endif
 
-    return node;
+        // Try to keep the best node at head of the list for easy retrieval
+        list_add_head(&open_list, node);
+    }
+    else
+    {
+#ifdef DEBUG_PATHING
+        log_format_msg(LOG_DEBUG, "Searching open list to add node");
+#endif
+
+        struct ListNode* list_node = NULL;
+        list_for_each(&open_list, list_node)
+        {
+            comp = list_node->data;
+
+            if(node->pathing_data.cost_to_end < comp->pathing_data.cost_to_end)
+            {
+#ifdef DEBUG_PATHING
+                log_format_msg(LOG_DEBUG, "Inserting into list");
+                log_pop_indent();
+#endif
+
+                list_insert_before(&open_list, node, list_node);
+                return;
+            }
+        }
+
+#ifdef DEBUG_PATHING
+        log_msg(LOG_DEBUG, "Adding to end of list");
+#endif
+
+        list_add(&open_list, node);
+    }
+ 
+#ifdef DEBUG_PATHING
+    log_pop_indent();
+#endif
 }
 
-/**
- * Evaluates a node's cost
- */
-float _evaluate(struct PathNode* path, struct MapLocation* dest, int path_bits)
+static void _reset_node(struct CONNECTIVITY_NODE* node)
 {
-    float mod = 0.0f;
+    node->pathing_data.from          = NULL;
+    node->pathing_data.to            = NULL;
+    node->pathing_data.turn_visited  = current_turn_number;
+    node->pathing_data.generation_id = generation_id;
+    node->pathing_data.state         = PATHING_NODE_STATE_UNVISITED;
+}
 
+static struct CONNECTIVITY_NODE* _find_path(struct CONNECTIVITY_NODE* dest, PathingFlags pather_flags, evaluation_func eval_f)
+{
+    const int iterations_max = 1000;
+    int iterations = 0;
+
+    struct CONNECTIVITY_NODE* best_node = NULL;
+
+    while(!list_empty(&open_list) && iterations < iterations_max)
+    {
+        best_node = list_pop_head(&open_list);
+        best_node->pathing_data.state = PATHING_NODE_STATE_CLOSED;
+
+        // Reached destination, return
+        if(best_node->x == dest->x && best_node->y == dest->y)
+        {
+            break;
+        }
+
+        struct ListNode* connection_list_node = NULL;
+        list_for_each(best_node->connections, connection_list_node)
+        {
+            struct CONNECTIVITY_NODE* node = connection_list_node->data;
+
+            // Check to see if this is a stale node (if it was last visited in a previous turn or a previous pathing request this turn)
+            // It it technically possible for a stale node clash to occur, if we do INT_MAX worth of requests in a single turn (unlikely)
+            // Set it to a fresh state
+            if(node->pathing_data.turn_visited != current_turn_number || node->pathing_data.generation_id != best_node->pathing_data.generation_id)
+            {
+                _reset_node(node);
+            }
+
+            if(node->pathing_data.state == PATHING_NODE_STATE_CLOSED)
+            {
+                // Check if this new path is more cost-efficient
+                // If it is, we can reassign the path to this closed node
+                if(node->pathing_data.cost_from_start > best_node->pathing_data.cost_from_start + 1)
+                {
+                    node->pathing_data.state           = PATHING_NODE_STATE_OPEN;
+                    node->pathing_data.from            = best_node;
+                    node->pathing_data.cost_from_start = best_node->pathing_data.cost_from_start + 1;
+                }
+            }
+            else if(node->pathing_data.state == PATHING_NODE_STATE_UNVISITED)
+            {
+                // This location has not been visited yet
+                // Add to open list
+                node->pathing_data.to   = NULL;
+                node->pathing_data.from = best_node; 
+
+                node->pathing_data.cost_from_start = best_node->pathing_data.cost_from_start + 1;
+                node->pathing_data.cost_to_end     = eval_f(node, dest, pather_flags);
+
+                _add_open_node(node);
+            }
+        }
+
+#if DEBUG_PATHING
+        _log_open_list();
+#endif
+
+        ++iterations;
+    }
+
+    return best_node;
+}
+
+static void _make_path_list(struct CONNECTIVITY_NODE* node, struct List* out_path)
+{
+    while(node)
+    {
+        list_add_head(out_path, node);
+        node = node->pathing_data.from;
+    }
+}
+
+#ifdef DEBUG_PATHING
+static void _log_open_list(void)
+{
+    log_msg(LOG_DEBUG, "Open list:");
+    log_push_indent();
+
+    struct ListNode* node = NULL;
+    list_for_each(&open_list, node)
+    {
+        struct CONNECTIVITY_NODE* conn = node->data;
+
+        log_format_msg(LOG_DEBUG, "(%d, %d)", conn->x, conn->y);
+    }
+
+    log_pop_indent();
+}
+
+static void _log_path(struct CONNECTIVITY_NODE* node)
+{
+    log_push_indent();
+
+    do
+    {
+        log_format_msg(LOG_DEBUG, "(%d, %d)", node->x, node->y);
+        node = node->pathing_data.to;
+    }
+    while(node->pathing_data.to);
+
+    log_pop_indent();
+}
+#endif
+
+float creature_manhatten_evaluation(struct CONNECTIVITY_NODE* node, struct CONNECTIVITY_NODE* dest, PathingFlags pather_flags)
+{
     // Special handling for the destination
-    if(path->loc->x == dest->x && path->loc->y == dest->y)
+    if(node->x == dest->x && node->y == dest->y)
     {
         return -INFINITY;
     }
 
-    // If this is not a valid move (e.g. other mon on this loc), assign a higher value than it's distance
-    // This means the algorithm will explore other paths before checking further in this direction
-    if(!move_is_valid(path->loc->x, path->loc->y, path_bits))
+    // Check to see whether the pather can use this location
+    if(!pathing_can_path(node->pathing_flags, pather_flags))
     {
-        mod = 100.0f;
+        // Cannot path to this node, so make it ridicuously high evaluation
+        return INFINITY;
     }
 
     // Use distance squared to avoid sqrt
-    float _x = dest->x - path->loc->x;
-    float _y = dest->y - path->loc->y;
+    float _x = dest->x - node->x;
+    float _y = dest->y - node->y;
     float dist2 = _x * _x + _y * _y;
 
-    return dist2 + mod;
+    return dist2 + node->weight;
 }
 
-void _add_open(struct PathNode* node)
+void pathing_find_path(struct CONNECTIVITY_NODE* restrict start, struct CONNECTIVITY_NODE* restrict end, PathingFlags pather_flags, evaluation_func eval_f, struct List* out_path)
 {
-    node->state = OPEN;
+    ++generation_id;
 
-    if(!_open_head)
-    {
-        _open_head = node;
-        return;
-    }
-    else if(node->cost_to_end < _open_head->cost_to_end)
-    {
-        node->pathlist_next = _open_head;
-        _open_head = node;
-        return;
-    }
+#if DEBUG_PATHING
+    log_msg(LOG_DEBUG, "pathing_find_path()");
+    log_format_msg(LOG_DEBUG, "(%d, %d) -> (%d, %d), turn: %d, generation: %d", start->x, start->y, end->x, end->y, current_turn_number, generation_id);
+    log_push_indent();
+#endif
 
-    struct PathNode* prev = _open_head;
-    while(prev->pathlist_next)
-    {
-        if(prev->pathlist_next && node->cost_to_end < prev->pathlist_next->cost_to_end)
-        {
-            node->pathlist_next = prev->pathlist_next;
-            prev->pathlist_next = node;
-            return;
-        }
+    list_uninit(&open_list);
 
-        prev = prev->pathlist_next;
-    }
+    // Initialis starting node and add to open list
+    _reset_node(start);
+    start->pathing_data.cost_from_start = 0.0f;
+    start->pathing_data.cost_to_end     = eval_f(start, end, pather_flags);
+    _add_open_node(start);
 
-    prev->pathlist_next = node;
-    node->pathlist_next = NULL;
-}
+    // This is as far as the path goes, maybe it's the destination, or as close as we can get
+    struct CONNECTIVITY_NODE* path_end = _find_path(end, pather_flags, eval_f);
+    _make_path_list(path_end, out_path);
 
-/**
- * Go through the open linked list and return the PathNode with the lowest score
- */
-struct PathNode* _get_best_open(void)
-{
-    struct PathNode* best = _open_head;
-    _open_head = _open_head->pathlist_next;
-
-    best->pathlist_next = NULL;
-
-    return best;
-}
-
-/**
- * A* algorithm constructing shortest path
- */
-static struct PathNode* _find_path(struct MapLocation* dest, int path_bits)
-{
-    struct PathNode* global_best = NULL;
-    struct PathNode* best_node = NULL;
-
-    while(_open_head)
-    {
-        best_node = _get_best_open();
-
-        // Set global best node seen so far
-        if(!global_best || best_node->cost_to_end < global_best->cost_to_end)
-        {
-            global_best = best_node;
-        }
-
-        // Reached destination, return
-        if(best_node->loc->x == dest->x && best_node->loc->y == dest->y)
-        {
-            return best_node;
-        }
-
-        for(int _x = best_node->loc->x - 1; _x < best_node->loc->x + 2; _x++)
-        for(int _y = best_node->loc->y - 1; _y < best_node->loc->y + 2; _y++)
-        {
-            // Ignore current node location
-            if(_x == best_node->loc->x && _y == best_node->loc->y)
-            {
-                continue;
-            }
-
-            // If not pathable then just continue
-            if(!move_is_pathable(_x, _y, path_bits))
-            {
-                continue;
-            }
-
-            //struct PathNode* p = map_cell_get_location(map_get_cell_by_world_coord(g_cmap, _x, _y), _x, _y)->path_node;
-            struct PathNode* p = map_get_location(g_cmap, _x, _y)->path_node;
-
-            // Check to see if this is a stale node (if it was last visited in a previous turn or a previous pathing request this turn)
-            // Set it to a fresh state
-            if(p->turn_visited != current_turn_number || p->gen_id != best_node->gen_id)
-            {
-                p->turn_visited = current_turn_number;
-                p->state = UNVISITED;
-                p->gen_id = best_node->gen_id;
-            }
-
-            if(p->state == CLOSED)
-            {
-                // Check if this new path is more cost-efficient
-                // If it is, we can reassign the path to this closed node
-                if(p->cost_from_start > best_node->cost_from_start + 1)
-                {
-                    p->prev = best_node;
-                    p->cost_from_start = best_node->cost_from_start + 1;
-                }
-            }
-            else if(p->state == UNVISITED)
-            {
-                // This location has not been visited yet
-                // Add to open list
-                p->pathlist_next = NULL;
-                p->next = NULL;
-                p->prev = best_node; 
-                p->cost_from_start = best_node->cost_from_start + 1;
-                p->cost_to_end = _evaluate(p, dest, path_bits);
-
-                _add_open(p);
-            }
-        }
-    }
-
-    return global_best;
-}
-
-struct PathNode* new_path_node(struct MapLocation* loc)
-{
-    struct PathNode* node = (struct PathNode*) malloc(sizeof(struct PathNode));
-    node->loc = loc;
-    node->pathlist_next = NULL;
-    node->next = NULL;
-    node->prev = NULL;
-    node->cost_to_end = FLT_MAX;
-    node->cost_from_start = FLT_MAX;
-    node->state = UNVISITED;
-    node->gen_id = -1;
-    node->turn_visited = -1;
-
-    return node;
-}
-
-/**
- * Returns the next location in the shortest path from start to dest
- */
-struct MapLocation* next_path_loc(struct MapLocation* start, struct MapLocation* dest, int path_bits)
-{
-    _open_head = NULL;
-
-    struct PathNode* node = start->path_node;
-    node->pathlist_next = NULL;
-    node->prev = NULL;
-    node->next = NULL;
-    node->cost_from_start = 0.0f;
-    node->cost_to_end = _evaluate(node, dest, path_bits);
-    node->turn_visited = current_turn_number;
-    node->gen_id = ++current_path_gen_id;
-
-    _add_open(node);
-
-    struct MapLocation* ret = NULL;
-    if((node = _find_path(dest, path_bits)) != NULL)
-    {
-        ret = _get_first_path_node(node)->loc;
-    }
-
-    return ret;
+#if DEBUG_PATHING
+    log_pop_indent();
+#endif
 }
