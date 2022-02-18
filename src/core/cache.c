@@ -18,7 +18,7 @@ static const int cs_key_shift = 16;
 static const int cs_max_generations = cs_key_mask >> cs_key_shift;
 static const int cs_max_capacity = cs_idx_mask - 1;
 
-struct cache
+struct CACHE
 {
     void* items;
     int*  handles;
@@ -59,7 +59,7 @@ static int _get_item_offset(int item_size, int handle)
 }
 
 // Returns pointer to the item in the cache items array
-static void* _get_item(struct cache* cache, int handle)
+static void* _get_item(struct CACHE* cache, int handle)
 {
     return cache->items + _get_item_offset(cache->item_size, handle);
 }
@@ -75,7 +75,7 @@ static bool _points_to_null(int handle)
  * If retrieving from the free list, make sure the free list is maintained.
  * Return invalid handle if there is nothing available.
  */
-static int _next_handle(struct cache* cache)
+static int _next_handle(struct CACHE* cache)
 {
     int handle = NULL_CACHE_HANDLE;
     int key = cs_key_mask;
@@ -139,7 +139,7 @@ static bool _check_valid(int handle)
 }
 
 // Checks whether the handle passed in by other code matches the handle the cache is expecting
-static bool _check_handle(struct cache* cache, int handle)
+static bool _check_handle(struct CACHE* cache, int handle)
 {
     int idx = _get_idx(handle);
 
@@ -162,7 +162,7 @@ static bool _check_handle(struct cache* cache, int handle)
 }
 
 #if DEBUG
-static void debug_print_free_list(struct cache* cache)
+static void debug_print_free_list(struct CACHE* cache)
 {
     int idx = _get_idx(cache->free_head);
 
@@ -187,7 +187,7 @@ static void debug_print_handle(int handle)
     printf("(i:%d, k:%d)", _get_idx(handle), _get_key(handle));
 }
 
-static void debug_print_handles(struct cache* cache)
+static void debug_print_handles(struct CACHE* cache)
 {
     debug_print_handle(cache->handles[0]);
 
@@ -201,11 +201,11 @@ static void debug_print_handles(struct cache* cache)
 }
 #endif
 
-struct cache* cache_new(int item_size, int capacity, free_function free_func)
+struct CACHE* cache_new(int item_size, int capacity, free_function free_func)
 {
     assert(capacity <= cs_max_capacity);
 
-    struct cache* cache = calloc(1, sizeof(struct cache));
+    struct CACHE* cache = calloc(1, sizeof(struct CACHE));
 
     cache->items     = calloc(capacity, item_size);
     cache->handles   = malloc(sizeof(int) * capacity);
@@ -219,7 +219,7 @@ struct cache* cache_new(int item_size, int capacity, free_function free_func)
     return cache;
 }
 
-void cache_free(struct cache* cache)
+void cache_free(struct CACHE* cache)
 {
     if(cache->free_func)
     {
@@ -238,34 +238,34 @@ void cache_free(struct cache* cache)
     free(cache);
 }
 
-int cache_size(struct cache* cache)
+int cache_size(struct CACHE* cache)
 {
     return cache->current_used;
 }
 
-int cache_capacity(struct cache* cache)
+int cache_capacity(struct CACHE* cache)
 {
     return cache->capacity;
 }
 
-int cache_item_size(struct cache* cache)
+int cache_item_size(struct CACHE* cache)
 {
     return cache->item_size;
 }
 
-int cache_used(struct cache* cache)
+int cache_used(struct CACHE* cache)
 {
     return cache->max_used;
 }
 
 // Check if the key generation for a handle matches what the cache is holding
 // If false, the slot has been freed and reused
-bool cache_stale_handle(struct cache* cache, int handle)
+bool cache_stale_handle(struct CACHE* cache, int handle)
 {
     return _get_key(handle) != _get_key(cache->handles[_get_idx(handle)]);
 }
 
-int cache_add(struct cache* cache, void* item)
+int cache_add(struct CACHE* cache, void* item)
 {
     int next_handle = _next_handle(cache);
 
@@ -278,7 +278,7 @@ int cache_add(struct cache* cache, void* item)
     return next_handle;
 }
 
-void cache_remove(struct cache* cache, int handle)
+void cache_remove(struct CACHE* cache, int handle)
 {
     if(!_check_handle(cache, handle))
     {
@@ -314,7 +314,7 @@ void cache_remove(struct cache* cache, int handle)
     --cache->current_used;
 }
 
-void* cache_get(struct cache* cache, int handle)
+void* cache_get(struct CACHE* cache, int handle)
 {
     if(!_check_handle(cache, handle))
     {
