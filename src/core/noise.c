@@ -4,6 +4,10 @@
 
 #include <math.h>
 
+static const float c_perlin_max   = sqrt(2.0f) / 2.0f;
+static const float c_perlin_min   = -c_perlin_max;
+static const float c_perlin_range = 1.0f / (c_perlin_max - c_perlin_min);
+
 static void _random_gradient(int x, int y, float* out_x, float* out_y)
 {
     const unsigned w = 8 * sizeof(unsigned);
@@ -91,12 +95,15 @@ static float _perlin(float x, float y)
     float x_interpolate_2 = _interpolate(dotx0y1, dotx1y1, d_x0);
     float y_interpolate   = _interpolate(x_interpolate_1, x_interpolate_2, d_y0);
 
-    //log_format_msg(LOG_DEBUG, "%f", y_interpolate);
-
     return y_interpolate;
 }
 
 float perlin(float x, float y)
 {
-    return _perlin(x, y);
+    float ret = _perlin(x, y);
+    ret = (ret - c_perlin_min) * c_perlin_range;
+
+    //log_format_msg(LOG_DEBUG, "%f", ret);
+
+    return ret;
 }
