@@ -7,5 +7,6 @@
 
 int   clamp(int val, int low, int high);
 float log_base(int x, int base);
+float map_range(float value, float old_low, float old_high, float new_low, float new_high);
 
 #endif
