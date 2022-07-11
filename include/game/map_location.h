@@ -15,6 +15,7 @@
 struct Feature;
 struct Mon;
 struct Object;
+struct Terrain;
 struct CONNECTIVITY_NODE;
 
 /**
@@ -27,6 +28,7 @@ struct MapLocation
     struct CONNECTIVITY_NODE* pathing;
     struct Mon* mon;
     struct Feature* feature;
+    struct Terrain* terrain;
     struct List obj_list;
     struct Symbol symbol;
     bool seen;
