@@ -1,5 +1,6 @@
 #include "core/term.h"
 
+#include "core/bit_flags.h"
 #include "core/colour.h"
 #include "core/log.h"
 
@@ -286,9 +287,9 @@ void term_set_attr(int x, int y, TextAttributeFlags ta_flags)
 {
     struct VTermSymbol* sym = _term_get_symbol(x, y);
 
-    if((sym->ta_flags | ta_flags) != sym->ta_flags)
+    if(!bit_flags_has_flags(sym->ta_flags, ta_flags))
     {
-        sym->ta_flags |= ta_flags;
+        bit_flags_set_flags(sym->ta_flags, ta_flags);
         sym->redraw = true;
     }
 }
@@ -297,9 +298,9 @@ void term_unset_attr(int x, int y, TextAttributeFlags ta_flags)
 {
     struct VTermSymbol* sym = _term_get_symbol(x, y);
 
-    if((sym->ta_flags | ta_flags) != sym->ta_flags)
+    if(bit_flags_has_flags(sym->ta_flags, ta_flags))
     {
-        sym->ta_flags &= ~ta_flags;
+        bit_flags_unset_flags(sym->ta_flags, ta_flags);
         sym->redraw = true;
     }
 }
