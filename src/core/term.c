@@ -46,6 +46,15 @@
 
 #define c_default c_escape c_escape_kind "0" c_graphics_mode
 
+enum TextAttribute
+{
+    A_NONE       = 0,
+    A_BOLD       = 1,
+    A_UNDERSCORE = 4,
+    A_BLINK      = 5,
+    A_REVERSE    = 7
+};
+
 struct
 {
     char buffer[PRINT_BUFFER_SIZE];

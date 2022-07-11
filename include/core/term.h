@@ -15,15 +15,6 @@ enum TextAttributeFlag
 };
 typedef unsigned int TextAttributeFlags;
 
-enum TextAttribute
-{
-    A_NONE       = 0,
-    A_BOLD       = 1,
-    A_UNDERSCORE = 4,
-    A_BLINK      = 5,
-    A_REVERSE    = 7
-};
-
 void term_init(void);
 void term_uninit(void);
 
