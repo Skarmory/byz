@@ -33,16 +33,18 @@
 
 #define c_foreground "38"
 #define c_background "48"
+#define c_default_foreground "39"
 #define c_default_background "49"
 #define c_true_colour "2"
 #define c_no_true_colour "5"
 #define c_rgb_format "%d" c_sep "%d" c_sep "%d"
-#define c_colour(ground) ground c_sep c_true_colour c_sep c_rgb_format c_graphics_mode
-#define c_colour_fg_format c_escape c_escape_kind c_colour(c_foreground)
-#define c_colour_bg_format c_escape c_escape_kind c_colour(c_background)
-#define c_colour_default_bg c_escape c_escape_kind c_default_background c_graphics_mode
+#define c_colour(ground) ground c_sep c_true_colour c_sep c_rgb_format
+#define c_colour_fg_format c_colour(c_foreground)
+#define c_colour_bg_format c_colour(c_background)
+#define c_colour_default_fg c_default_foreground
+#define c_colour_default_bg c_default_background
 
-#define c_attribute_format c_escape c_escape_kind "%d" c_graphics_mode
+#define c_attribute_format "%d"
 
 #define c_default c_escape c_escape_kind "0" c_graphics_mode
 
@@ -189,6 +191,70 @@ void term_set_sigint_callback(void(*handler)(int))
     signal(SIGINT, handler);
 }
 
+void term_resize(void)
+{
+    struct winsize ws = { 0 };
+    ioctl(1, TIOCGWINSZ, &ws);
+
+    vterm->width  = ws.ws_col;
+    vterm->height = ws.ws_row;
+
+    struct VTermSymbol* new_sym = realloc(vterm->symbols, vterm->width * vterm->height * sizeof(struct VTermSymbol));
+    if(!new_sym)
+    {
+        // Couldn't realloc the memory, which means something bad has happened.
+        // Cannot really continue from this situation so just die.
+        abort();
+    }
+
+    memset(new_sym, 0, vterm->width * vterm->height * sizeof(struct VTermSymbol));
+    vterm->symbols = new_sym;
+}
+
+static void _write_attribute(enum TextAttribute attribute, bool semicolon)
+{
+    if(semicolon)
+    {
+        _writef(c_sep);
+    }
+
+    _writef(c_attribute_format, attribute);
+}
+
+static void _write_fg_colour(struct Colour* fg, bool semicolon)
+{
+    if(semicolon)
+    {
+        _writef(c_sep);
+    }
+
+    if(fg->r == -1)
+    {
+        _writef(c_default_foreground);
+    }
+    else
+    {
+        _writef(c_colour_fg_format, fg->r, fg->g, fg->b);
+    }
+}
+
+static void _write_bg_colour(struct Colour* bg, bool semicolon)
+{
+    if(semicolon)
+    {
+        _writef(c_sep);
+    }
+
+    if(bg->r == -1)
+    {
+        _writef(c_default_background);
+    }
+    else
+    {
+        _writef(c_colour_bg_format, bg->r, bg->g, bg->b);
+    }
+}
+
 void term_refresh(void)
 {
     struct VTermSymbol* sym = NULL;
@@ -214,33 +280,54 @@ void term_refresh(void)
         lx = x;
         ly = y;
 
+        // Start graphics mode
+        bool semicolon = false;
+        _writef(c_escape);
+        _writef(c_escape_kind);
+
         // Set attributes
-        _writef(c_attribute_format, A_NONE);
+        //_writef(c_attribute_format, A_NONE);
         if(sym->ta_flags != A_NONE_BIT)
         {
-            if(sym->ta_flags & A_BOLD_BIT)       _writef(c_attribute_format, A_BOLD);
-            if(sym->ta_flags & A_UNDERSCORE_BIT) _writef(c_attribute_format, A_UNDERSCORE);
-            if(sym->ta_flags & A_BLINK_BIT)      _writef(c_attribute_format, A_BLINK);
-            if(sym->ta_flags & A_REVERSE_BIT)    _writef(c_attribute_format, A_REVERSE);
-        }
+            if(sym->ta_flags & A_BOLD_BIT)
+            {
+                _write_attribute(A_BOLD, semicolon);
+                semicolon = true;
+            }
 
-        // Set colours
-        if(sym->fg.r != -1)
-        {
-            _writef(c_colour_fg_format, sym->fg.r, sym->fg.g, sym->fg.b);
-        }
+            if(sym->ta_flags & A_UNDERSCORE_BIT)
+            {
+                _write_attribute(A_UNDERSCORE, semicolon);
+                semicolon = true;
+            }
 
-        if(sym->bg.r != -1)
-        {
-            _writef(c_colour_bg_format, sym->bg.r, sym->bg.g, sym->bg.b);
+            if(sym->ta_flags & A_BLINK_BIT)
+            {
+                _write_attribute(A_BLINK, semicolon);
+                semicolon = true;
+            }
+
+            if(sym->ta_flags & A_REVERSE_BIT)
+            {
+                _write_attribute(A_REVERSE, semicolon);
+                semicolon = true;
+            }
         }
         else
         {
-            _writef(c_colour_default_bg);
+            _write_attribute(A_NONE, semicolon);
+            semicolon = true;
         }
+
+        // Set colours
+        _write_fg_colour(&sym->fg, semicolon);
+        _write_bg_colour(&sym->bg, semicolon);
+
+        _writef(c_graphics_mode);
 
         // Write symbol
         _writef("%c", sym->symbol);
+        _writef(c_default);
 
         sym->redraw = false;
     }
