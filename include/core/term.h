@@ -23,6 +23,7 @@ void term_set_cursor(bool on);
 void term_set_echo(bool state);
 void term_set_canon(bool state);
 void term_set_sigint_callback(void(*sig)(int));
+void term_resize(void);
 
 void term_clear(void);
 void term_clear_area(int x, int y, int w, int h);

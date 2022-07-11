@@ -99,34 +99,9 @@ static void _flush(void)
     write_buffer.buffer_len = 0;
 }
 
-static void _term_resize(void)
-{
-    struct winsize ws = { 0 };
-    ioctl(1, TIOCGWINSZ, &ws);
-
-    vterm->width  = ws.ws_col;
-    vterm->height = ws.ws_row;
-
-    struct VTermSymbol* new_sym = realloc(vterm->symbols, vterm->width * vterm->height * sizeof(struct VTermSymbol));
-    if(!new_sym)
-    {
-        // Couldn't realloc the memory, which means something bad has happened.
-        // Cannot really continue from this situation so just die.
-        abort();
-    }
-
-    vterm->symbols = new_sym;
-}
-
 static inline struct VTermSymbol* _term_get_symbol(int x, int y)
 {
     return &vterm->symbols[y * vterm->width + x];
-}
-
-static void _term_resize_signal_handler(int _)
-{
-    (void)_;
-    _term_resize();
 }
 
 static inline bool _should_redraw(struct VTermSymbol* symbol, char new_symbol, struct Colour* new_fg, struct Colour* new_bg, TextAttributeFlags new_ta_flags)
@@ -354,13 +329,12 @@ void term_init(void)
     t.c_lflag &= (~ECHO & ~ICANON);
     tcsetattr(1, TCSANOW, &t);
 
-    _term_resize();
+    term_resize();
     term_clear();
     term_set_cursor(false);
     write_buffer.buffer_len = 0;
 
     atexit(&term_uninit);
-    signal(SIGWINCH, &_term_resize_signal_handler);
 }
 
 void term_draw_symbol(int x, int y, struct Colour* fg, struct Colour* bg, TextAttributeFlags ta_flags, char symbol)
