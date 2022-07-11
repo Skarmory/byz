@@ -8,7 +8,6 @@
 #include "game/movement.h"
 
 #include <stddef.h>
-#include <math.h>
 
 // TODO: Implement a sorted linked list?
 
@@ -195,29 +194,6 @@ static void _log_path(struct CONNECTIVITY_NODE* node)
     log_pop_indent();
 }
 #endif
-
-float creature_manhatten_evaluation(struct CONNECTIVITY_NODE* node, struct CONNECTIVITY_NODE* dest, PathingFlags pather_flags)
-{
-    // Special handling for the destination
-    if(node->x == dest->x && node->y == dest->y)
-    {
-        return -INFINITY;
-    }
-
-    // Check to see whether the pather can use this location
-    if(!pathing_can_path(node->pathing_flags, pather_flags))
-    {
-        // Cannot path to this node, so make it ridicuously high evaluation
-        return INFINITY;
-    }
-
-    // Use distance squared to avoid sqrt
-    float _x = dest->x - node->x;
-    float _y = dest->y - node->y;
-    float dist2 = _x * _x + _y * _y;
-
-    return dist2 + node->weight;
-}
 
 void pathing_find_path(struct CONNECTIVITY_NODE* restrict start, struct CONNECTIVITY_NODE* restrict end, PathingFlags pather_flags, evaluation_func eval_f, struct List* out_path)
 {
