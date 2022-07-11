@@ -107,3 +107,19 @@ float perlin(float x, float y)
 
     return ret;
 }
+
+float perlin2(float x, float y, float amplitude, float frequency, int octaves)
+{
+    float ret = 0.0f;
+
+    for(int i = 0; i < octaves; ++i)
+    {
+        ret += amplitude * _perlin(x * frequency, y * frequency);
+        amplitude *= 0.5f;
+        frequency *= 2.0f;
+    }
+
+    ret = (ret - c_perlin_min) * c_perlin_range;
+
+    return ret;
+}
