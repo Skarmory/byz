@@ -90,9 +90,14 @@ static void _writef(const char* format, ...)
     va_start(args, format);
 
     vsnprintf(write_buffer.buffer + write_buffer.buffer_len, PRINT_BUFFER_SIZE - write_buffer.buffer_len, format, args);
-    write_buffer.buffer_len += strlen(write_buffer.buffer + write_buffer.buffer_len);
 
     va_end(args);
+
+    int add_len = strlen(write_buffer.buffer + write_buffer.buffer_len);
+#ifdef DEBUG_LOG_TERMINAL
+    log_format_msg(LOG_DEBUG, "\t%s", write_buffer.buffer + write_buffer.buffer_len);
+#endif
+    write_buffer.buffer_len += add_len;
 }
 
 static void _flush(void)
