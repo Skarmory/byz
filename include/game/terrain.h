@@ -1,14 +1,13 @@
-#ifndef BYZ_TERRAIN_H
-#define BYZ_TERRAIN_H
+#ifndef BYZ_GAME_TERRAIN_H
+#define BYZ_GAME_TERRAIN_H
 
-enum BIOME
+enum Biome
 {
-    MEDITERRANEAN = 0
+    BIOME_MEDITERRANEAN = 0
 };
 
-struct TERRAIN
+struct Terrain
 {
-    //enum BIOME biome;
     float biome;
     float elevation;
     float vegetation;
