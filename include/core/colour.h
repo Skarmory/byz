@@ -47,9 +47,9 @@
 #define CLR_PINK    29
 #define CLR_LPINK   30
 
-#define CLR_DEFAULT  39
+#define CLR_DEFAULT  31
 
-#define CLR_FOG_OF_WAR 40
+#define CLR_FOG_OF_WAR 32
 
 // mob difficulty class
 // grey - green - blue - purple - yellow - orange - red
