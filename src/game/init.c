@@ -1,18 +1,20 @@
 #include "game/init.h"
 
 #include "core/colour.h"
+#include "core/draw.h"
+#include "core/log.h"
+#include "core/symbol.h"
+#include "core/tasking.h"
+
+#include "game/console_commands_init.h"
 #include "game/feature.h"
 #include "game/gameplay.h"
 #include "game/globals.h"
-#include "game/console_commands_init.h"
-#include "core/log.h"
 #include "game/mon_attack.h"
 #include "game/mon_type.h"
 #include "game/obj_armour.h"
 #include "game/obj_weapon.h"
 #include "game/parsing.h"
-#include "core/symbol.h"
-#include "core/tasking.h"
 #include "game/util.h"
 
 #include "ui/ui.h"
@@ -111,7 +113,7 @@ bool init_main(void)
     srand(time(NULL));
 
     init_logs();
-    term_init();
+    draw_init();
     term_set_sigint_callback(&sigint_handler);
     term_get_wh(&screen_cols, &screen_rows);
 
@@ -137,6 +139,6 @@ void uninit_main(void)
     uninit_console_commands();
     _uninit_gamedata();
     tasker_free(g_tasker);
-    term_uninit();
+    draw_uninit();
     uninit_logs();
 }
