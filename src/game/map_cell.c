@@ -6,6 +6,7 @@
 #include "game/object.h"
 #include "game/pathing_node.h"
 #include "game/pathing.h"
+#include "game/terrain.h"
 
 #include <stdlib.h>
 
@@ -43,6 +44,8 @@ struct MapCell* map_cell_new(int cell_x, int cell_y, int seed)
 
         loc->pathing = malloc(sizeof(struct CONNECTIVITY_NODE));
         connectivity_node_init(loc->pathing, loc->x, loc->y, 0.0f, PATHING_GROUND);
+
+        loc->terrain = malloc(sizeof(struct Terrain));
     }
 
     // Connect up connectivity nodes
