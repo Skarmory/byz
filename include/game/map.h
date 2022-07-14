@@ -21,9 +21,10 @@ struct Map
     int width;
     int height;
     struct List cell_list;
+    int seed;
 };
 
-struct Map* map_new(int width, int height);
+struct Map* map_new(int width, int height, int seed);
 void map_free(struct Map* map);
 
 struct MapCell* map_get_cell_by_world_coord(struct Map* map, int x, int y);

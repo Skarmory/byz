@@ -24,11 +24,13 @@ int         g_cy = 0;
 /**
  * Creates the map and sets map locations to default values
  */
-struct Map* map_new(int width, int height)
+struct Map* map_new(int width, int height, int seed)
 {
     struct Map* map = malloc(sizeof(struct Map));
     map->width = width;
     map->height = height;
+    map->seed = seed;
+
     list_init(&map->cell_list);
 
     return map;
