@@ -18,12 +18,13 @@ struct MapCell
     int cell_y;
     int world_x;
     int world_y;
+    int seed;
     struct MapLocation locs[g_map_cell_width * g_map_cell_height];
     struct List room_list;
     struct List mon_list;
 };
 
-struct MapCell* map_cell_new(int cell_x, int cell_y);
+struct MapCell* map_cell_new(int cell_x, int cell_y, int seed);
 void map_cell_free(struct MapCell* cell);
 
 /**

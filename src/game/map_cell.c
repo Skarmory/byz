@@ -14,13 +14,14 @@ static inline struct MapLocation* _get_map_location_internal(struct MapCell* cel
     return &cell->locs[y * g_map_cell_width + x];
 }
 
-struct MapCell* map_cell_new(int cell_x, int cell_y)
+struct MapCell* map_cell_new(int cell_x, int cell_y, int seed)
 {
     struct MapCell* cell = malloc(sizeof(struct MapCell));
     cell->cell_x = cell_x;
     cell->cell_y = cell_y;
     cell->world_x = cell_x * g_map_cell_width;
     cell->world_y = cell_y * g_map_cell_height;
+    cell->seed = seed;
     list_init(&cell->room_list);
     list_init(&cell->mon_list);
 
