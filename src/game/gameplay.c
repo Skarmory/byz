@@ -94,22 +94,6 @@ void gameplay_turn(void)
             case GAMEPLAY_COMMAND_MOVE_RIGHT_UP:
             case GAMEPLAY_COMMAND_MOVE_RIGHT_DOWN:
             {
-                //struct MapLocation* you_loc = map_get_location(g_cmap, g_cx, g_cy);
-                //if(!you_loc)
-                //{
-                //    break;
-                //}
-
-                //struct MapLocation* target = map_get_location_offset_by_direction(g_cmap, you_loc, cmd);
-                //if(!target)
-                //{
-                //    break;
-                //}
-
-                //g_cx = target->x;
-                //g_cy = target->y;
-
-                ////end_turn = _do_smart_action(target);
                 break;
             }
             case GAMEPLAY_COMMAND_PASS_TURN:
@@ -117,19 +101,12 @@ void gameplay_turn(void)
                 end_turn = true;
                 break;
             }
-            case GAMEPLAY_COMMAND_PICK_UP:
-            {
-                //end_turn = _pick_up_object();
-                break;
-            }
             case GAMEPLAY_COMMAND_DISPLAY_INVENTORY:
             {
-                //end_turn = display_inventory_player();
                 break;
             }
             case GAMEPLAY_COMMAND_DISPLAY_CHARACTER_SCREEN:
             {
-                //end_turn = character_screen_handler();
                 break;
             }
             case GAMEPLAY_COMMAND_NO_SAVE_AND_QUIT:
@@ -164,7 +141,6 @@ void gameplay_turn(void)
         {
             clear_msgs();
             flush_msg_buffer();
-            display_main_screen();
             term_refresh();
         }
     }

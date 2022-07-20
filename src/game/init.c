@@ -18,7 +18,6 @@
 #include "game/util.h"
 
 #include "ui/ui.h"
-#include "ui/ui_map.h"
 
 #include <stddef.h>
 #include <stdlib.h>

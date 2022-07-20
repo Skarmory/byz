@@ -12,7 +12,6 @@
 #include "game/mon_stats.h"
 #include "game/object.h"
 #include "core/term.h"
-#include "ui/ui_map.h"
 #include "game/util.h"
 #include "core/string.h"
 
@@ -124,20 +123,3 @@ char prompt_choice(const char* title, char** choices, int length)
     return choice;
 }
 
-void display_main_screen(void)
-{
-    ui_map_draw(g_cmap, g_camera, MAP_LAYER_NORMAL);
-    display_char_status();
-}
-
-/*
- * Prints a simple view of the player's stats at the bottom of the game area.
- */
-void display_char_status(void)
-{
-    //char tmp[STATUS_W];
-    //sprintf(tmp, "%s\tHP: %d/%d", g_you->name, g_you->mon->stats.hp, g_you->mon->stats.hp_max);
-
-    //term_clear_area(STATUS_X, STATUS_Y, MCOLS, 1);
-    //term_draw_text(STATUS_X, STATUS_Y, NULL, NULL, 0, tmp);
-}
