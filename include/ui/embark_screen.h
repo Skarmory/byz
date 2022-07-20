@@ -1,5 +1,5 @@
-#ifndef BYZ_EmbarkScreen_H
-#define BYZ_EmbarkScreen_H
+#ifndef BYZ_UI_EMBARK_SCREEN_H
+#define BYZ_UI_EMBARK_SCREEN_H
 
 #include "core/input_keycodes.h"
 #include "core/cursor.h"
