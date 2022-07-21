@@ -5,9 +5,11 @@
 
 const char* MSGHIST_FNAME = "msghist.log";
 const char* DEBUGLOG_FNAME = "debug.log";
+const char* TESTLOG_FNAME = "test.log";
 
 FILE* msghist_file;
 FILE* debug_file;
+FILE* test_file;
 
 static int indent_level = 0;
 
@@ -20,51 +22,57 @@ void init_logs(void)
 {
     msghist_file = fopen(MSGHIST_FNAME, "w");
     debug_file = fopen(DEBUGLOG_FNAME, "w");
+    test_file = fopen(TESTLOG_FNAME, "w");
+}
+
+static void _log_msg(FILE* file, const char* msg)
+{
+    for(int i = 0; i < indent_level; ++i)
+    {
+        fprintf(file, "\t");
+    }
+
+    fprintf(file, "%s\n", msg);
+    fflush(file);
 }
 
 /**
  * Write a message to the given log file.
  */
-void log_msg(int logtype, const char* msg)
+void log_msg(LogChannels channels, const char* msg)
 {
-    switch(logtype)
+    if(bit_flags_has_flags(channels, LOG_MSGHIST))
     {
-        case LOG_MSGHIST:
-        {
-            for(int i = 0; i < indent_level; ++i)
-            {
-                fprintf(msghist_file, "\t");
-            }
+        _log_msg(msghist_file, msg);
+    }
 
-            fprintf(msghist_file, "%s\n", msg);
-            fflush(msghist_file);
-            break;
-        }
-        case LOG_DEBUG:
-        {
-            for(int i = 0; i < indent_level; ++i)
-            {
-                fprintf(debug_file, "\t");
-            }
+    if(bit_flags_has_flags(channels, LOG_DEBUG))
+    {
+        _log_msg(debug_file, msg);
+    }
 
-            fprintf(debug_file, "%s\n", msg);
-            fflush(debug_file);
-            break;
-        }
+    if(bit_flags_has_flags(channels, LOG_TEST))
+    {
+        _log_msg(test_file, msg);
+    }
+
+    if(bit_flags_has_flags(channels, LOG_STDOUT))
+    {
+        _log_msg(stdout, msg);
     }
 }
 
 /**
  * Write a formatted message with variable args to the given log file.
  */
-void log_format_msg(int logtype, const char* format, ...)
+void log_format_msg(LogChannels channels, const char* format, ...)
 {
     va_list args;
     va_start(args, format);
 
     char msg[256];
     vsnprintf(msg, 256, format, args);
-    log_msg(logtype, msg);
+    log_msg(channels, msg);
 
     va_end(args);
 }
@@ -86,6 +94,7 @@ void uninit_logs(void)
 {
     fclose(msghist_file);
     fclose(debug_file);
+    fclose(test_file);
 }
 
 void log_push_indent(void)
