@@ -18,5 +18,6 @@ int            string_size(struct string* str);
 // Helpful functions
 void           string_printf(struct string* str);
 int            string_rfindi(struct string* str, const char needle, size_t start);
+void           string_format(struct string* str, const char* format, ...);
 
 #endif
