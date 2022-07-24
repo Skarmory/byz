@@ -8,6 +8,7 @@ struct string;
 bool test_string_new(void);
 bool test_string_init(void);
 bool test_string_size(void);
+bool test_string_format(void);
 
 void test_string_run_all_tests(void);
 
