@@ -278,7 +278,7 @@ static void _set_vegetation(struct MapLocation* loc, float map_seed, struct RNG*
     log_format_msg(LOG_DEBUG, "%d %d %d", loc->symbol.fg.r, loc->symbol.fg.g, loc->symbol.fg.b);
 }
 
-static void gen_map_cell(struct MapCell* cell, int elevation_seed_x, int elevation_seed_y, float step_size)
+static void gen_map_cell(struct MapCell* cell, int world_x, int world_y, int elevation_seed_x, int elevation_seed_y, float step_size)
 {
     struct RNG* rng = rng_new(cell->seed);
 
@@ -292,7 +292,6 @@ static void gen_map_cell(struct MapCell* cell, int elevation_seed_x, int elevati
 
         float offset_x = (float)cell->world_x + ((float)rx * step_size);
         float offset_y = (float)cell->world_y + ((float)ry * step_size);
-
 
         _set_elevation(loc, offset_x, offset_y, elevation_seed_x, elevation_seed_y);
         //_set_elevation(loc, (float)loc->x, (float)loc->y, elevation_seed_x, elevation_seed_y);
@@ -316,6 +315,8 @@ static void _gen_map(struct Map* map, struct RNG* map_rng)
 struct GenMapCellTaskArgs
 {
     struct MapCell* cell;
+    int world_x;
+    int world_y;
     int elevation_seed_x;
     int elevation_seed_y;
     float step_size;
@@ -324,7 +325,7 @@ struct GenMapCellTaskArgs
 static int _gen_map_cell_task_func(void* args)
 {
     struct GenMapCellTaskArgs* cast_args = args;
-    gen_map_cell(cast_args->cell, cast_args->elevation_seed_x, cast_args->elevation_seed_y, cast_args->step_size);
+    gen_map_cell(cast_args->cell, cast_args->world_x, cast_args->world_y, cast_args->elevation_seed_x, cast_args->elevation_seed_y, cast_args->step_size);
     return TASK_STATUS_SUCCESS;
 }
 
@@ -344,7 +345,7 @@ void gen_map(struct Map* map)
         char task_name[256];
         snprintf(task_name, 256, "Generate World Map Cell %d, %d", x, y);
         struct GenMapCellTaskArgs task_args = {
-            cell, elevation_seed_x, elevation_seed_y, 1.0f
+            cell, cell->world_x, cell->world_y, elevation_seed_x, elevation_seed_y, 1.0f
         };
 
         struct Task* task = task_new(task_name, &_gen_map_cell_task_func, NULL, &task_args, sizeof(struct GenMapCellTaskArgs));
