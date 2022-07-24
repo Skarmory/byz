@@ -290,8 +290,8 @@ static void gen_map_cell(struct MapCell* cell, int world_x, int world_y, int ele
         //_set_biome(loc, map_seed);
         //_set_vegetation(loc, map_seed, rng);
 
-        float offset_x = (float)cell->world_x + ((float)rx * step_size);
-        float offset_y = (float)cell->world_y + ((float)ry * step_size);
+        float offset_x = (float)world_x + ((float)rx * step_size);
+        float offset_y = (float)world_y + ((float)ry * step_size);
 
         _set_elevation(loc, offset_x, offset_y, elevation_seed_x, elevation_seed_y);
         //_set_elevation(loc, (float)loc->x, (float)loc->y, elevation_seed_x, elevation_seed_y);
@@ -454,11 +454,11 @@ void gen_regional_map(struct Map* regional_map, int world_map_x, int world_map_y
 
         char task_name[256];
         snprintf(task_name, 256, "Generate Regional Map Cell %d, %d", x, y);
-        struct GenRegionalMapCellTaskArgs task_args = {
-            cell, regional_map, world_map_x, world_map_y, elevation_seed_x, elevation_seed_y, 1.0f / (float)g_map_cell_width
+        struct GenMapCellTaskArgs task_args = {
+            cell, world_map_x, world_map_y, elevation_seed_x, elevation_seed_y, 1.0f / (float)g_map_cell_width
         };
 
-        struct Task* task = task_new(task_name, &_gen_regional_map_cell_task_func, NULL, &task_args, sizeof(struct GenRegionalMapCellTaskArgs));
+        struct Task* task = task_new(task_name, &_gen_map_cell_task_func, NULL, &task_args, sizeof(struct GenMapCellTaskArgs));
         tasker_add_task(g_tasker, task);
     }
 
