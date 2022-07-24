@@ -25,8 +25,9 @@
 #include <time.h>
 
 #define ELEVATION_MODULO 1000000
+#define PRECIPITATION_MODULO 7364759
 
-enum MapType 
+enum MapType
 {
     MAP_TYPE_WORLD,
     MAP_TYPE_REGIONAL
@@ -36,6 +37,8 @@ struct MapGenArgs
 {
     int elevation_seed_x;
     int elevation_seed_y;
+    int precipitation_seed_x;
+    int precipitation_seed_y;
 };
 
 struct GenMapCellTaskArgs
@@ -181,16 +184,9 @@ static void _connect_cells(struct MapCell* cell, struct MapCell* adjacent)
     }
 }
 
-static void _set_biome(struct MapLocation* loc, struct RNG* rng)
+static void _set_biome(struct Terrain* terrain)
 {
-    const float c_biome_divisor = 20.0f;
-
-    float random = (float)(rng_get(rng) % 100);
-
-    float biome_x = (((float)loc->x) + random) / c_biome_divisor;
-    float biome_y = (((float)loc->y) + random) / c_biome_divisor;
-
-    loc->terrain->biome = perlin(biome_x, biome_y);
+    terrain->biome = biome_from_params(terrain->elevation, terrain->precipitation);
 }
 
 static void _set_elevation(struct MapLocation* loc, float offset_x, float offset_y, const struct MapGenArgs* map_gen_args)
@@ -203,21 +199,38 @@ static void _set_elevation(struct MapLocation* loc, float offset_x, float offset
     loc->terrain->elevation = noise;
 }
 
-static void _colour_elevation(struct MapLocation* loc, struct RNG* rng)
+static void _set_precipitation(struct MapLocation* loc, float offset_x, float offset_y, const struct MapGenArgs* map_gen_args)
 {
-    static const int TERRAIN_THRESHOLDS_COLOUR_MAP[] =
+    float precipitation_x = offset_x + (float)map_gen_args->precipitation_seed_x;
+    float precipitation_y = offset_y + (float)map_gen_args->precipitation_seed_y;
+
+    float noise = perlin2(precipitation_x, precipitation_y, 1.0f, 0.1f, 8);
+
+    loc->terrain->precipitation = noise;
+}
+
+static void _colour_biome(struct MapLocation* loc, struct RNG* rng)
+{
+    static const struct Colour BIOME_COLOURS[] =
     {
-        CLR_BLUE,   // Water
-        CLR_DBROWN, // Dirt/Mud
-        CLR_GREEN,  // Grass
-        CLR_LGREY,  // Moutain
-        CLR_WHITE   // Snow
+        { 0, 0, 255 },     // Ocean
+        { 235, 245, 20 },  // Beach
+        { 255, 255, 255 }, // Snow
+        { 128, 128, 128 }, // Mountain
+        { 87, 235, 249 },  // Tundra
+        { 5, 102, 33 },    // Taiga
+        { 250, 148, 24 },  // Subtropical desert
+        { 250, 219, 4 },   // Temperate grassland
+        { 46, 177, 83 },   // Temperate deciduous forest
+        { 200, 225, 35 },  // Savannah
+        { 155, 225, 35 },  // Tropical seasonal forest
+        { 80, 220, 65 },   // Temperate rain forest
+        { 8, 250, 54 },    // Tropical rain forest
     };
 
-    struct Colour c;
-    int z = clamp((int)( loc->terrain->elevation * 5 ), 0, 4);
-    c = *COL( TERRAIN_THRESHOLDS_COLOUR_MAP[z] );
+    struct Colour c = BIOME_COLOURS[loc->terrain->biome];
 
+    // Random stagger colours for some variety
     c.r = clamp(c.r + (rng_get(rng) % 20) - 10, 0, 255);
     c.g = clamp(c.g + (rng_get(rng) % 20) - 10, 0, 255);
     c.b = clamp(c.b + (rng_get(rng) % 20) - 10, 0, 255);
@@ -227,78 +240,78 @@ static void _colour_elevation(struct MapLocation* loc, struct RNG* rng)
     loc->symbol.sym = ' ';
 }
 
-static void _set_vegetation(struct MapLocation* loc, float map_seed, struct RNG* rng)
-{
-    const float c_vegetation_divisor = 4.0f;
-    const float c_shrub_range_start  = 0.0f;
-    const float c_shrub_range_end    = 0.4f;
-    const float c_tree_range_start   = 0.7f;
-    const float c_tree_range_end     = 1.0f;
+//static void _set_vegetation(struct MapLocation* loc, float map_seed, struct RNG* rng)
+//{
+//    const float c_vegetation_divisor = 4.0f;
+//    const float c_shrub_range_start  = 0.0f;
+//    const float c_shrub_range_end    = 0.4f;
+//    const float c_tree_range_start   = 0.7f;
+//    const float c_tree_range_end     = 1.0f;
+//
+//    float vegetation_x = (((float)loc->x) +  map_seed + 0.5f) / c_vegetation_divisor;
+//    float vegetation_y = (((float)loc->y) +  map_seed + 0.5f) / c_vegetation_divisor;
+//
+//    loc->terrain->vegetation = perlin(vegetation_x, vegetation_y);
+//
+//    if(loc->terrain->elevation < 0.2f)
+//    {
+//        return;
+//    }
+//
+//    if(loc->terrain->vegetation >= c_shrub_range_start && loc->terrain->vegetation < c_shrub_range_end)
+//    {
+//        loc->symbol.fg = *COL(CLR_LGREEN);
+//
+//        int variation = rng_get(rng) % 4;
+//        if(variation == 0)
+//        {
+//            loc->symbol.sym = '.';
+//        }
+//        else if(variation == 1)
+//        {
+//            loc->symbol.sym = ',';
+//        }
+//        else if(variation == 2)
+//        {
+//            loc->symbol.sym = ';';
+//        }
+//        else
+//        {
+//            loc->symbol.sym = ':';
+//        }
+//
+//        loc->symbol.fg.g = rng_get(rng) % 255;
+//        //loc->symbol.fg.r = clamp(loc->symbol.fg.r + (rng_get(rng) % 30) - 15, 0, 255);
+//        //loc->symbol.fg.g = clamp(loc->symbol.fg.g + (rng_get(rng) % 50) - 50, 0, 255);
+//        //loc->symbol.fg.b = clamp(loc->symbol.fg.b + (rng_get(rng) % 30) - 15, 0, 255);
+//
+//    }
+//    else if(loc->terrain->vegetation >= c_tree_range_start && loc->terrain->vegetation < c_tree_range_end)
+//    {
+//        loc->symbol.fg = *COL(CLR_LGREEN);
+//
+//        int variation = rng_get(rng) % 2;
+//        if(variation == 0)
+//        {
+//            loc->symbol.sym = '*';
+//        }
+//        else
+//        {
+//            loc->symbol.sym = '#';
+//        }
+//
+//        loc->symbol.fg.g = rng_get(rng) % 255;
+//
+//        //loc->symbol.fg.r = clamp(loc->symbol.fg.r + (rng_get(rng) % 30) - 15, 0, 255);
+//        //loc->symbol.fg.g = clamp(loc->symbol.fg.g + (rng_get(rng) % 50) - 50, 0, 255);
+//        //loc->symbol.fg.b = clamp(loc->symbol.fg.b + (rng_get(rng) % 30) - 15, 0, 255);
+//    }
+//
+//
+//    log_format_msg(LOG_DEBUG, "%d %d %d", loc->symbol.fg.r, loc->symbol.fg.g, loc->symbol.fg.b);
+//}
 
-    float vegetation_x = (((float)loc->x) +  map_seed + 0.5f) / c_vegetation_divisor;
-    float vegetation_y = (((float)loc->y) +  map_seed + 0.5f) / c_vegetation_divisor;
-
-    loc->terrain->vegetation = perlin(vegetation_x, vegetation_y);
-
-    if(loc->terrain->elevation < 0.2f)
-    {
-        return;
-    }
-
-    if(loc->terrain->vegetation >= c_shrub_range_start && loc->terrain->vegetation < c_shrub_range_end)
-    {
-        loc->symbol.fg = *COL(CLR_LGREEN);
-
-        int variation = rng_get(rng) % 4;
-        if(variation == 0)
-        {
-            loc->symbol.sym = '.';
-        }
-        else if(variation == 1)
-        {
-            loc->symbol.sym = ',';
-        }
-        else if(variation == 2)
-        {
-            loc->symbol.sym = ';';
-        }
-        else
-        {
-            loc->symbol.sym = ':';
-        }
-
-        loc->symbol.fg.g = rng_get(rng) % 255;
-        //loc->symbol.fg.r = clamp(loc->symbol.fg.r + (rng_get(rng) % 30) - 15, 0, 255);
-        //loc->symbol.fg.g = clamp(loc->symbol.fg.g + (rng_get(rng) % 50) - 50, 0, 255);
-        //loc->symbol.fg.b = clamp(loc->symbol.fg.b + (rng_get(rng) % 30) - 15, 0, 255);
-
-    }
-    else if(loc->terrain->vegetation >= c_tree_range_start && loc->terrain->vegetation < c_tree_range_end)
-    {
-        loc->symbol.fg = *COL(CLR_LGREEN);
-
-        int variation = rng_get(rng) % 2;
-        if(variation == 0)
-        {
-            loc->symbol.sym = '*';
-        }
-        else
-        {
-            loc->symbol.sym = '#';
-        }
-
-        loc->symbol.fg.g = rng_get(rng) % 255;
-
-        //loc->symbol.fg.r = clamp(loc->symbol.fg.r + (rng_get(rng) % 30) - 15, 0, 255);
-        //loc->symbol.fg.g = clamp(loc->symbol.fg.g + (rng_get(rng) % 50) - 50, 0, 255);
-        //loc->symbol.fg.b = clamp(loc->symbol.fg.b + (rng_get(rng) % 30) - 15, 0, 255);
-    }
-
-
-    log_format_msg(LOG_DEBUG, "%d %d %d", loc->symbol.fg.r, loc->symbol.fg.g, loc->symbol.fg.b);
-}
-
-static void gen_map_cell(struct MapCell* cell, const struct MapLocation* loc_ref, const struct MapGenArgs* map_gen_args, float step_size)
+static void _gen_map_cell(struct MapCell* cell, const struct MapLocation* loc_ref, const struct MapGenArgs* map_gen_args, float step_size)
 {
     struct RNG* rng = rng_new(cell->seed);
 
@@ -307,15 +320,14 @@ static void gen_map_cell(struct MapCell* cell, const struct MapLocation* loc_ref
     {
         struct MapLocation* loc = map_cell_get_location_relative(cell, rx, ry);
 
-        //_set_biome(loc, map_seed);
-        //_set_vegetation(loc, map_seed, rng);
-
         float offset_x = (float)loc_ref->x + ((float)rx * step_size);
         float offset_y = (float)loc_ref->y + ((float)ry * step_size);
 
         _set_elevation(loc, offset_x, offset_y, map_gen_args);
+        _set_precipitation(loc, offset_x, offset_y, map_gen_args);
+        _set_biome(loc->terrain);
 
-        _colour_elevation(loc, rng);
+        _colour_biome(loc, rng);
     }
 
     rng_free(rng);
@@ -324,7 +336,7 @@ static void gen_map_cell(struct MapCell* cell, const struct MapLocation* loc_ref
 static int _gen_map_cell_task_func(void* args)
 {
     struct GenMapCellTaskArgs* cast_args = args;
-    gen_map_cell(cast_args->cell_gen, cast_args->loc_ref, cast_args->map_gen_args, cast_args->step_size);
+    _gen_map_cell(cast_args->cell_gen, cast_args->loc_ref, cast_args->map_gen_args, cast_args->step_size);
     return TASK_STATUS_SUCCESS;
 }
 
@@ -335,6 +347,8 @@ static void _gen_map(enum MapType map_type, struct Map* map, const struct MapLoc
     struct MapGenArgs map_gen_args;
     map_gen_args.elevation_seed_x = rng_get(rng) % ELEVATION_MODULO;
     map_gen_args.elevation_seed_y = rng_get(rng) % ELEVATION_MODULO;
+    map_gen_args.precipitation_seed_x = rng_get(rng) % PRECIPITATION_MODULO;
+    map_gen_args.precipitation_seed_y = rng_get(rng) % PRECIPITATION_MODULO;
 
     for(int x = 0; x < map->width; ++x)
     for(int y = 0; y < map->height; ++y)
