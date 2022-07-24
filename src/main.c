@@ -182,7 +182,6 @@ int run(void)
 {
     if(!init_main())
     {
-
         printf("Initialisation failed. Check debug log.\n");
         return -1;
     }

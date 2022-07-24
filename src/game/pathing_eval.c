@@ -4,7 +4,7 @@
 
 #include <math.h>
 
-float manhatten_evaluation(struct CONNECTIVITY_NODE* node, struct CONNECTIVITY_NODE* dest, PathingFlags pather_flags)
+float manhatten_evaluation(struct ConnectivityNode* node, struct ConnectivityNode* dest, PathingFlags pather_flags)
 {
     // Special handling for the destination
     if(node->x == dest->x && node->y == dest->y)

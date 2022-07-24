@@ -42,7 +42,7 @@ struct MapCell* map_cell_new(int cell_x, int cell_y, int seed)
         loc->seen = false;
         list_init(&loc->obj_list);
 
-        loc->pathing = malloc(sizeof(struct CONNECTIVITY_NODE));
+        loc->pathing = malloc(sizeof(struct ConnectivityNode));
         connectivity_node_init(loc->pathing, loc->x, loc->y, 0.0f, PATHING_GROUND);
 
         loc->terrain = malloc(sizeof(struct Terrain));

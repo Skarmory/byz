@@ -16,7 +16,7 @@ struct Feature;
 struct Mon;
 struct Object;
 struct Terrain;
-struct CONNECTIVITY_NODE;
+struct ConnectivityNode;
 
 /**
  * Contains information about a square on the map
@@ -25,7 +25,7 @@ struct MapLocation
 {
     int x;
     int y;
-    struct CONNECTIVITY_NODE* pathing;
+    struct ConnectivityNode* pathing;
     struct Mon* mon;
     struct Feature* feature;
     struct Terrain* terrain;

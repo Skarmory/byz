@@ -3,7 +3,7 @@
 
 #include "game/pathing_flags.h"
 
-enum PATHING_NODE_STATE
+enum PathingNodeState
 {
     PATHING_NODE_STATE_UNVISITED = 0,
     PATHING_NODE_STATE_OPEN = 1,
@@ -13,34 +13,34 @@ enum PATHING_NODE_STATE
 /* Internal pathfinding data
  * Each pathfind request uses these to store data whilt the algorithm runs
  */
-struct PATHING_DATA
+struct PathingData
 {
-    struct CONNECTIVITY_NODE* from;
-    struct CONNECTIVITY_NODE* to;
-    float                     cost_to_end;
-    float                     cost_from_start;
-    enum PATHING_NODE_STATE   state;
+    struct ConnectivityNode* from;
+    struct ConnectivityNode* to;
+    float                    cost_to_end;
+    float                    cost_from_start;
+    enum PathingNodeState    state;
 
-    int                       turn_visited;
-    int                       generation_id;
+    int                      turn_visited;
+    int                      generation_id;
 };
 
-void pathing_data_init(struct PATHING_DATA* per_path_data);
+void pathing_data_init(struct PathingData* per_path_data);
 
 /* Node containing location and game data for pathing
  */
-struct CONNECTIVITY_NODE
+struct ConnectivityNode
 {
-    int                 x;
-    int                 y;
-    float               weight;
-    PathingFlags        pathing_flags;
-    struct PATHING_DATA pathing_data;
-    struct List*        connections;
+    int                x;
+    int                y;
+    float              weight;
+    PathingFlags       pathing_flags;
+    struct PathingData pathing_data;
+    struct List*       connections;
 };
 
-void connectivity_node_init(struct CONNECTIVITY_NODE* node, int x, int y, float weight, PathingFlags pathing_flags);
-void connectivity_node_add_connection(struct CONNECTIVITY_NODE* node, struct CONNECTIVITY_NODE* connection);
-void connectivity_node_remove_connection(struct CONNECTIVITY_NODE* node, struct CONNECTIVITY_NODE* connection);
+void connectivity_node_init(struct ConnectivityNode* node, int x, int y, float weight, PathingFlags pathing_flags);
+void connectivity_node_add_connection(struct ConnectivityNode* node, struct ConnectivityNode* connection);
+void connectivity_node_remove_connection(struct ConnectivityNode* node, struct ConnectivityNode* connection);
 
 #endif
