@@ -135,7 +135,7 @@ static void _group_cursor_to_world(struct EmbarkScreenGroup* group, int* out_wx,
     camera_relative_to_world(&group->camera, *out_wx, *out_wy, out_wx, out_wy);
 }
 
-static struct Map* _create_regional_map(int world_map_x, int world_map_y, int map_seed)
+static struct Map* _create_regional_map(const struct MapLocation* world_loc, int map_seed)
 {
     struct Map* regional_map = map_new(3, 3, map_seed);
     for(int x = 0; x < 3; ++x)
@@ -145,7 +145,7 @@ static struct Map* _create_regional_map(int world_map_x, int world_map_y, int ma
         list_add(&regional_map->cell_list, cell);
     }
 
-    gen_regional_map(regional_map, world_map_x, world_map_y);
+    gen_regional_map(regional_map, world_loc);
 
     return regional_map;
 }
@@ -188,7 +188,8 @@ static void _handle_cursor_move(struct EmbarkScreen* embark_screen, enum Command
         int wx = -1;
         int wy = -1;
         _group_cursor_to_world(&embark_screen->world_group, &wx, &wy);
-        gen_regional_map(embark_screen->regional_group.map, wx, wy);
+        const struct MapLocation* world_loc = map_get_location(embark_screen->world_group.map, wx, wy);
+        gen_regional_map(embark_screen->regional_group.map, world_loc);
     }
 }
 
@@ -240,9 +241,10 @@ struct EmbarkScreen* embark_screen_new(struct Map* world_map)
     int world_x = -1;
     int world_y = -1;
     _group_cursor_to_world(&embark_screen->world_group, &world_x, &world_y);
+    const struct MapLocation* world_loc = map_get_location(world_map, world_x, world_y);
 
     embark_screen->world_group.map = world_map;
-    embark_screen->regional_group.map = _create_regional_map(world_x, world_y, world_map->seed);
+    embark_screen->regional_group.map = _create_regional_map(world_loc, world_map->seed);
 
     return embark_screen;
 }
