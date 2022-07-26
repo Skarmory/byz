@@ -2,6 +2,7 @@
 #define BYZ_MAP_CELL_H
 
 #include "core/list.h"
+#include "core/symbol.h"
 #include "game/map_location.h"
 #include "game/mon_attr.h"
 
@@ -22,6 +23,8 @@ struct MapCell
     struct MapLocation locs[g_map_cell_width * g_map_cell_height];
     struct List room_list;
     struct List mon_list;
+
+    struct Symbol symbol;
 };
 
 struct MapCell* map_cell_new(int cell_x, int cell_y, int seed);
