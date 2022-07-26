@@ -195,8 +195,8 @@ int run(void)
     int screen_width;
     int screen_height;
 
-    const int world_map_width = 20;
-    const int world_map_height = 20;
+    const int world_map_width = 100;
+    const int world_map_height = 100;
     const int world_map_seed = 7;/*time(NULL)*/
 
     g_cmap = map_new(world_map_width, world_map_height, world_map_seed);
@@ -206,6 +206,7 @@ int run(void)
         list_add(&g_cmap->cell_list, map_cell_new(x, y, 0 ));
     }
     gen_map(g_cmap);
+    gen_map_cell(g_cmap, map_get_cell_by_cell_coord(g_cmap, 0, 0));
 
     anon.embark_screen = embark_screen_new(g_cmap);
 
