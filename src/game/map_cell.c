@@ -23,48 +23,26 @@ struct MapCell* map_cell_new(int cell_x, int cell_y, int seed)
     cell->world_x = cell_x * g_map_cell_width;
     cell->world_y = cell_y * g_map_cell_height;
     cell->seed = seed;
-    list_init(&cell->room_list);
+    cell->locs = NULL;
     list_init(&cell->mon_list);
 
-    struct Feature* rock = feature_look_up_by_id("sroc");
-    for(int i = 0; i < g_map_cell_width; ++i)
-    for(int j = 0; j < g_map_cell_height; ++j)
-    {
-        struct MapLocation* loc = map_cell_get_location_relative(cell, i, j);
-        loc->x = cell->world_x + i;
-        loc->y = cell->world_y + j;
-        loc->symbol.sym  = '.';
-        loc->symbol.fg   = *COL(CLR_WHITE);
-        loc->symbol.bg   = *COL(CLR_DEFAULT);
-        loc->symbol.attr = 0;
-        loc->mon = NULL;
-        loc->feature = rock;
-        loc->seen = false;
-        list_init(&loc->obj_list);
-
-        loc->pathing = malloc(sizeof(struct ConnectivityNode));
-        connectivity_node_init(loc->pathing, loc->x, loc->y, 0.0f, PATHING_GROUND);
-
-        loc->terrain = malloc(sizeof(struct Terrain));
-    }
-
     // Connect up connectivity nodes
-    for(int i = 0; i < g_map_cell_width; ++i)
-    for(int j = 0; j < g_map_cell_height; ++j)
-    {
-        struct MapLocation* loc = map_cell_get_location_relative(cell, i, j);
-        struct CONNECTIVITY_NODE* node = loc->pathing;
+    //for(int i = 0; i < g_map_cell_width; ++i)
+    //for(int j = 0; j < g_map_cell_height; ++j)
+    //{
+    //    struct MapLocation* loc = map_cell_get_location_relative(cell, i, j);
+    //    struct CONNECTIVITY_NODE* node = loc->pathing;
 
-        for(int x = i - 1; x < i + 2; ++x)
-        for(int y = j - 1; y < j + 2; ++y)
-        {
-            struct MapLocation* connection_loc = map_cell_get_location_relative(cell, x, y);
-            if(connection_loc)
-            {
-                connectivity_node_add_connection(node, connection_loc->pathing);
-            }
-        }
-    }
+    //    for(int x = i - 1; x < i + 2; ++x)
+    //    for(int y = j - 1; y < j + 2; ++y)
+    //    {
+    //        struct MapLocation* connection_loc = map_cell_get_location_relative(cell, x, y);
+    //        if(connection_loc)
+    //        {
+    //            connectivity_node_add_connection(node, connection_loc->pathing);
+    //        }
+    //    }
+    //}
 
     return cell;
 }
@@ -80,22 +58,18 @@ void map_cell_free(struct MapCell* cell)
         free(node);
     }
 
-    // Free rooms
-    list_for_each_safe(&cell->room_list, node, n)
+    if(cell->locs)
     {
-        free(node->data);
-        free(node);
-    }
-
-    for(int idx = 0; idx < (g_map_cell_width * g_map_cell_height); ++idx)
-    {
-        list_for_each_safe(&cell->locs[idx].obj_list, node, n)
+        for(int idx = 0; idx < (g_map_cell_width * g_map_cell_height); ++idx)
         {
-            free_obj(node->data);
-            free(node);
-        }
+            list_for_each_safe(&cell->locs[idx].obj_list, node, n)
+            {
+                free_obj(node->data);
+                free(node);
+            }
 
-        free(cell->locs[idx].pathing);
+            free(cell->locs[idx].pathing);
+        }
     }
 
     free(cell);

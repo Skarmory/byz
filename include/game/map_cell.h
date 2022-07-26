@@ -20,8 +20,7 @@ struct MapCell
     int world_x;
     int world_y;
     int seed;
-    struct MapLocation locs[g_map_cell_width * g_map_cell_height];
-    struct List room_list;
+    struct MapLocation* locs;
     struct List mon_list;
 
     struct Symbol symbol;
