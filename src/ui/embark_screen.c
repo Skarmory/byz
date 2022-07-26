@@ -38,11 +38,12 @@ struct EmbarkScreenGroup
     struct Container region;
     struct Cursor cursor;
     struct camera camera;
-    struct Map* map;
 };
 
 struct EmbarkScreen
 {
+    struct Map* map;
+
     struct EmbarkScreenGroup world_group;
     struct EmbarkScreenGroup regional_group;
 
@@ -135,21 +136,6 @@ static void _group_cursor_to_world(struct EmbarkScreenGroup* group, int* out_wx,
     camera_relative_to_world(&group->camera, *out_wx, *out_wy, out_wx, out_wy);
 }
 
-static struct Map* _create_regional_map(const struct MapLocation* world_loc, int map_seed)
-{
-    struct Map* regional_map = map_new(3, 3, map_seed);
-    for(int x = 0; x < 3; ++x)
-    for(int y = 0; y < 3; ++y)
-    {
-        struct MapCell* cell = map_cell_new(x, y, 0);
-        list_add(&regional_map->cell_list, cell);
-    }
-
-    gen_regional_map(regional_map, world_loc);
-
-    return regional_map;
-}
-
 static void _handle_cursor_move(struct EmbarkScreen* embark_screen, enum Command cmd)
 {
     struct EmbarkScreenGroup* group = _get_focussed_group(embark_screen);
@@ -175,8 +161,20 @@ static void _handle_cursor_move(struct EmbarkScreen* embark_screen, enum Command
     else
     {
         // Not in camera bounds, check to see if the camera can move
-        if(map_in_bounds(group->map, group->camera.x + x_off, group->camera.y + y_off) &&
-           map_in_bounds(group->map, camera_max_x(&group->camera) + x_off, camera_max_y(&group->camera) + y_off))
+        bool camera_can_move = true;
+        if(!embark_screen->focus_regional)
+        {
+            camera_can_move = map_in_bounds_cell(embark_screen->map, group->camera.x + x_off, group->camera.y + y_off) &&
+                              map_in_bounds_cell(embark_screen->map, camera_max_x(&group->camera) + x_off, camera_max_y(&group->camera) + y_off);
+
+        }
+        else
+        {
+            camera_can_move = map_in_bounds(embark_screen->map, group->camera.x + x_off, group->camera.y + y_off) &&
+                              map_in_bounds(embark_screen->map, camera_max_x(&group->camera) + x_off, camera_max_y(&group->camera) + y_off);
+        }
+
+        if(camera_can_move)
         {
             group->camera.x += x_off;
             group->camera.y += y_off;
@@ -188,8 +186,12 @@ static void _handle_cursor_move(struct EmbarkScreen* embark_screen, enum Command
         int wx = -1;
         int wy = -1;
         _group_cursor_to_world(&embark_screen->world_group, &wx, &wy);
-        const struct MapLocation* world_loc = map_get_location(embark_screen->world_group.map, wx, wy);
-        gen_regional_map(embark_screen->regional_group.map, world_loc);
+
+        struct MapCell* cell = map_get_cell_by_cell_coord(embark_screen->map, wx, wy);
+        if(cell->locs == NULL)
+        {
+            gen_map_cell(embark_screen->map, cell);
+        }
     }
 }
 
@@ -238,20 +240,13 @@ struct EmbarkScreen* embark_screen_new(struct Map* world_map)
     embark_screen->focus_regional = false;
     embark_screen->layer = MAP_LAYER_NORMAL;
 
-    int world_x = -1;
-    int world_y = -1;
-    _group_cursor_to_world(&embark_screen->world_group, &world_x, &world_y);
-    const struct MapLocation* world_loc = map_get_location(world_map, world_x, world_y);
-
-    embark_screen->world_group.map = world_map;
-    embark_screen->regional_group.map = _create_regional_map(world_loc, world_map->seed);
+    embark_screen->map = world_map;
 
     return embark_screen;
 }
 
 void embark_screen_free(struct EmbarkScreen* embark_screen)
 {
-    free(embark_screen->regional_group.map);
     free(embark_screen);
 }
 
@@ -331,7 +326,7 @@ static void _draw_location(int screen_i, int screen_j, struct MapLocation* map_l
     }
 }
 
-static void _draw_group(struct EmbarkScreenGroup* group, enum MapLayer layer)
+static void _draw_world_view_map(struct EmbarkScreenGroup* group, struct Map* map, enum MapLayer layer)
 {
     int world_x = 0;
     int world_y = 0;
@@ -342,20 +337,55 @@ static void _draw_group(struct EmbarkScreenGroup* group, enum MapLayer layer)
     {
         if(camera_relative_to_world(&group->camera, rel_x, rel_y, &world_x, &world_y))
         {
-            map_location = map_get_location(group->map, world_x, world_y);
+            struct MapCell* cell = map_get_cell_by_cell_coord(map, world_x, world_y);
+            if(cell)
+            {
+                term_draw_symbol(screen_x, screen_y, &cell->symbol.fg, &cell->symbol.bg, 0, cell->symbol.sym);
+            }
+            else
+            {
+                term_draw_symbol(screen_x, screen_y, COL(CLR_DEFAULT), COL(CLR_FOG_OF_WAR), 0, ' ');
+            }
+        }
+    }
+
+    // Draw cursor
+    _group_cursor_to_world(group, &world_x, &world_y);
+    struct MapCell* cell = map_get_cell_by_cell_coord(map, world_x, world_y);
+    map_location = map_cell_get_location_relative(cell, 0, 0);
+    term_draw_symbol(group->cursor.x, group->cursor.y, COL(CLR_PINK), &map_location->symbol.bg, A_BLINK_BIT | A_BOLD_BIT, '@' );
+}
+
+static void _draw_regional_view_map(struct EmbarkScreenGroup* group, struct MapCell* cell, enum MapLayer layer)
+{
+    int world_x = 0;
+    int world_y = 0;
+    struct MapLocation* map_location = NULL;
+
+    for(int screen_x = group->region.x, rel_x = 0; screen_x < group->region.x + group->region.w; ++screen_x, ++rel_x)
+    for(int screen_y = group->region.y, rel_y = 0; screen_y < group->region.y + group->region.h; ++screen_y, ++rel_y)
+    {
+        if(camera_relative_to_world(&group->camera, rel_x, rel_y, &world_x, &world_y))
+        {
+            map_location = map_cell_get_location_relative(cell, world_x, world_y);
             _draw_location(screen_x, screen_y, map_location, layer); 
         }
     }
 
     // Draw cursor
-    camera_relative_to_world(&group->camera, group->cursor.x, group->cursor.y, &world_x, &world_y);
-    map_location = map_get_location(group->map, world_x, world_y);
-    term_set_attr(group->cursor.x, group->cursor.y, A_REVERSE_BIT );
+    _group_cursor_to_world(group, &world_x, &world_y);
+    map_location = map_cell_get_location_relative(cell, world_x, world_y);
+    term_draw_symbol(group->cursor.x, group->cursor.y, COL(CLR_PINK), &map_location->symbol.bg, A_BLINK_BIT | A_BOLD_BIT, '@' );
 }
 
 void embark_screen_draw(struct EmbarkScreen* embark_screen)
 {
-    _draw_group(&embark_screen->world_group, embark_screen->layer);
-    _draw_group(&embark_screen->regional_group, embark_screen->layer);
+    int wx = -1;
+    int wy = -1;
+    camera_relative_to_world(&embark_screen->world_group.camera, embark_screen->world_group.cursor.x, embark_screen->world_group.cursor.y, &wx, &wy);
+    struct MapCell* current_cell = map_get_cell_by_cell_coord(embark_screen->map, wx, wy);
+
+    _draw_world_view_map(&embark_screen->world_group, embark_screen->map, embark_screen->layer);
+    _draw_regional_view_map(&embark_screen->regional_group, current_cell, embark_screen->layer);
     _debug_draw(embark_screen);
 }
