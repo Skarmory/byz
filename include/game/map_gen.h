@@ -2,11 +2,9 @@
 #define BYZ_GAME_MAP_GEN_H
 
 struct Map;
-struct MapLocation;
+struct MapCell;
 
-/* Create a map */
 void gen_map(struct Map* map);
-
-void gen_regional_map(struct Map* regional_map, const struct MapLocation* world_loc_ref);
+void gen_map_cell(struct Map* map, struct MapCell* cell);
 
 #endif
