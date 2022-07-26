@@ -33,6 +33,7 @@ struct MapCell* map_get_cell_by_cell_coord(struct Map* map, int x, int y);
 struct MapLocation* map_get_location(struct Map* map, int x, int y);
 
 bool map_in_bounds(struct Map* map, int x, int y);
+bool map_in_bounds_cell(struct Map* map, int cx, int cy);
 
 extern struct Map* g_cmap;
 extern int g_cx;

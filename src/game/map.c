@@ -96,3 +96,9 @@ bool map_in_bounds(struct Map* map, int x, int y)
 {
     return map_get_location(map, x, y) != NULL;
 }
+
+bool map_in_bounds_cell(struct Map* map, int cx, int cy)
+{
+    return cx >= 0 && cx < map->width &&
+           cy >= 0 && cy < map->height;
+}
