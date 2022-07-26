@@ -34,6 +34,8 @@ bool geom_point_in_circle(int px, int py, int cx, int cy, int r);
  */
 bool geom_point_in_rect(int px, int py, int rx, int ry, int w, int h);
 
+bool geom_rect_in_rect(int rx0, int ry0, int rw0, int rh0, int rx1, int ry1, int rw1, int rh1);
+
 void geom_dbg_log_line(struct Line* line, const char* line_name);
 
 #endif
