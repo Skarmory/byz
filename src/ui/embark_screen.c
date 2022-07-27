@@ -210,14 +210,14 @@ struct EmbarkScreen* embark_screen_new(struct Map* world_map)
 
     // Split the screen into regions to display to display camera views in
     embark_screen->world_group.region.x = 0;
-    embark_screen->world_group.region.y = 0;
+    embark_screen->world_group.region.y = 1;
     embark_screen->world_group.region.w = screen_width / 2;
-    embark_screen->world_group.region.h = screen_height;
+    embark_screen->world_group.region.h = screen_height - 1;
 
     embark_screen->regional_group.region.x = screen_width / 2 + 1; // Add column of padding
-    embark_screen->regional_group.region.y = 0;
+    embark_screen->regional_group.region.y = 1;
     embark_screen->regional_group.region.w = screen_width / 2 - 1; // Account for column of padding
-    embark_screen->regional_group.region.h = screen_height;
+    embark_screen->regional_group.region.h = screen_height - 1;
 
     // Create cameras to display world and regional map views
     embark_screen->world_group.camera.x = 0;
@@ -351,6 +351,11 @@ static void _draw_world_view_map(struct EmbarkScreenGroup* group, struct Map* ma
     int world_x = 0;
     int world_y = 0;
 
+    const char* title = "World Map";
+    const int title_len_half = 5;
+
+    term_draw_text((group->region.w / 2) - title_len_half, 0, COL(CLR_WHITE), COL(CLR_DEFAULT), A_NONE_BIT, title);
+
     for(int screen_x = group->region.x, rel_x = 0; screen_x < group->region.x + group->region.w; ++screen_x, ++rel_x)
     for(int screen_y = group->region.y, rel_y = 0; screen_y < group->region.y + group->region.h; ++screen_y, ++rel_y)
     {
@@ -380,6 +385,11 @@ static void _draw_regional_view_map(struct EmbarkScreenGroup* group, struct MapC
     int world_y = 0;
     struct MapLocation* map_location = NULL;
 
+    const char* title = "Regional Map";
+    const int title_len_half = 6;
+
+    term_draw_text(group->region.x + (group->region.w / 2) - title_len_half, 0, COL(CLR_WHITE), COL(CLR_DEFAULT), A_NONE_BIT, title);
+
     for(int screen_x = group->region.x, rel_x = 0; screen_x < group->region.x + group->region.w; ++screen_x, ++rel_x)
     for(int screen_y = group->region.y, rel_y = 0; screen_y < group->region.y + group->region.h; ++screen_y, ++rel_y)
     {
@@ -400,7 +410,7 @@ void embark_screen_draw(struct EmbarkScreen* embark_screen)
 {
     int wx = -1;
     int wy = -1;
-    camera_relative_to_world(&embark_screen->world_group.camera, embark_screen->world_group.cursor.x, embark_screen->world_group.cursor.y, &wx, &wy);
+    _group_cursor_to_world(&embark_screen->world_group, &wx, &wy);
     struct MapCell* current_cell = map_get_cell_by_cell_coord(embark_screen->map, wx, wy);
 
     _draw_world_view_map(&embark_screen->world_group, embark_screen->map, embark_screen->layer);
