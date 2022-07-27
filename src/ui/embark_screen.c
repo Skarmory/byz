@@ -188,7 +188,7 @@ static void _handle_cursor_move(struct EmbarkScreen* embark_screen, enum Command
         _group_cursor_to_world(&embark_screen->world_group, &wx, &wy);
 
         struct MapCell* cell = map_get_cell_by_cell_coord(embark_screen->map, wx, wy);
-        if(cell->locs == NULL)
+        if(cell && cell->locs == NULL)
         {
             gen_map_cell(embark_screen->map, cell);
         }
@@ -222,13 +222,13 @@ struct EmbarkScreen* embark_screen_new(struct Map* world_map)
     // Create cameras to display world and regional map views
     embark_screen->world_group.camera.x = 0;
     embark_screen->world_group.camera.y = 0;
-    embark_screen->world_group.camera.w = embark_screen->world_group.region.w;
-    embark_screen->world_group.camera.h = embark_screen->world_group.region.h;
+    embark_screen->world_group.camera.w = minu(embark_screen->world_group.region.w, world_map->width);
+    embark_screen->world_group.camera.h = minu(embark_screen->world_group.region.h, world_map->height);
 
     embark_screen->regional_group.camera.x = 0;
     embark_screen->regional_group.camera.y = 0;
-    embark_screen->regional_group.camera.w = embark_screen->regional_group.region.w;
-    embark_screen->regional_group.camera.h = embark_screen->regional_group.region.h;
+    embark_screen->regional_group.camera.w = minu(embark_screen->regional_group.region.w, g_map_cell_width);
+    embark_screen->regional_group.camera.h = minu(embark_screen->regional_group.region.h, g_map_cell_height);
 
     // Set cursors to region origins
     embark_screen->world_group.cursor.x  = embark_screen->world_group.region.x;
@@ -241,6 +241,26 @@ struct EmbarkScreen* embark_screen_new(struct Map* world_map)
     embark_screen->layer = MAP_LAYER_NORMAL;
 
     embark_screen->map = world_map;
+
+    term_draw_area(
+            embark_screen->world_group.region.x,
+            embark_screen->world_group.region.y,
+            embark_screen->world_group.region.w,
+            embark_screen->world_group.region.h,
+            COL(CLR_DEFAULT),
+            COL(CLR_FOG_OF_WAR),
+            A_NONE_BIT,
+            ' ');
+
+    term_draw_area(
+            embark_screen->regional_group.region.x,
+            embark_screen->regional_group.region.y,
+            embark_screen->regional_group.region.w,
+            embark_screen->regional_group.region.h,
+            COL(CLR_DEFAULT),
+            COL(CLR_FOG_OF_WAR),
+            A_NONE_BIT,
+            ' ');
 
     return embark_screen;
 }
@@ -330,7 +350,6 @@ static void _draw_world_view_map(struct EmbarkScreenGroup* group, struct Map* ma
 {
     int world_x = 0;
     int world_y = 0;
-    struct MapLocation* map_location = NULL;
 
     for(int screen_x = group->region.x, rel_x = 0; screen_x < group->region.x + group->region.w; ++screen_x, ++rel_x)
     for(int screen_y = group->region.y, rel_y = 0; screen_y < group->region.y + group->region.h; ++screen_y, ++rel_y)
@@ -352,8 +371,7 @@ static void _draw_world_view_map(struct EmbarkScreenGroup* group, struct Map* ma
     // Draw cursor
     _group_cursor_to_world(group, &world_x, &world_y);
     struct MapCell* cell = map_get_cell_by_cell_coord(map, world_x, world_y);
-    map_location = map_cell_get_location_relative(cell, 0, 0);
-    term_draw_symbol(group->cursor.x, group->cursor.y, COL(CLR_PINK), &map_location->symbol.bg, A_BLINK_BIT | A_BOLD_BIT, '@' );
+    term_draw_symbol(group->cursor.x, group->cursor.y, COL(CLR_BLACK), &cell->symbol.bg, A_BLINK_BIT | A_BOLD_BIT, '@' );
 }
 
 static void _draw_regional_view_map(struct EmbarkScreenGroup* group, struct MapCell* cell, enum MapLayer layer)
@@ -375,7 +393,7 @@ static void _draw_regional_view_map(struct EmbarkScreenGroup* group, struct MapC
     // Draw cursor
     _group_cursor_to_world(group, &world_x, &world_y);
     map_location = map_cell_get_location_relative(cell, world_x, world_y);
-    term_draw_symbol(group->cursor.x, group->cursor.y, COL(CLR_PINK), &map_location->symbol.bg, A_BLINK_BIT | A_BOLD_BIT, '@' );
+    term_draw_symbol(group->cursor.x, group->cursor.y, COL(CLR_BLACK), &map_location->symbol.bg, A_BLINK_BIT | A_BOLD_BIT, '@' );
 }
 
 void embark_screen_draw(struct EmbarkScreen* embark_screen)
