@@ -8,8 +8,8 @@
 
 #include <stdbool.h>
 
-#define g_map_cell_width  100
-#define g_map_cell_height 100
+#define g_map_cell_width  256
+#define g_map_cell_height 256
 
 struct Mon;
 
