@@ -47,6 +47,8 @@ struct EmbarkScreen
     struct EmbarkScreenGroup world_group;
     struct EmbarkScreenGroup regional_group;
 
+    struct Container info_container;
+
     bool focus_regional;
     enum MapLayer layer;
 };
@@ -136,6 +138,30 @@ static void _group_cursor_to_world(struct EmbarkScreenGroup* group, int* out_wx,
     camera_relative_to_world(&group->camera, *out_wx, *out_wy, out_wx, out_wy);
 }
 
+static struct MapCell* _current_world_map_cell(struct EmbarkScreen* es)
+{
+    int wx = -1;
+    int wy = -1;
+
+    _group_cursor_to_world(&es->world_group, &wx, &wy);
+
+    struct MapCell* cell = map_get_cell_by_cell_coord(es->map, wx, wy);
+    return cell;
+}
+
+static struct MapLocation* _current_regional_map_loc(struct EmbarkScreen* es)
+{
+    int wx = -1;
+    int wy = -1;
+
+    struct MapCell* cell = _current_world_map_cell(es);
+
+    _group_cursor_to_world(&es->regional_group, &wx, &wy);
+
+    struct MapLocation* loc = map_cell_get_location_relative(cell, wx, wy);
+    return loc;
+}
+
 static void _handle_cursor_move(struct EmbarkScreen* embark_screen, enum Command cmd)
 {
     struct EmbarkScreenGroup* group = _get_focussed_group(embark_screen);
@@ -200,6 +226,19 @@ static void _handle_focus_switch(struct EmbarkScreen* embark_screen, enum Comman
     embark_screen->focus_regional = !embark_screen->focus_regional;
 }
 
+static void _draw_container(struct Container* container)
+{
+    term_draw_area(
+            container->x,
+            container->y,
+            container->w,
+            container->h,
+            COL(CLR_DEFAULT),
+            COL(CLR_FOG_OF_WAR),
+            A_NONE_BIT,
+            ' ');
+}
+
 struct EmbarkScreen* embark_screen_new(struct Map* world_map)
 {
     int screen_width = 0;
@@ -208,16 +247,27 @@ struct EmbarkScreen* embark_screen_new(struct Map* world_map)
 
     struct EmbarkScreen* embark_screen = malloc(sizeof(struct EmbarkScreen));
 
+    int container_space = screen_width;
+
     // Split the screen into regions to display to display camera views in
     embark_screen->world_group.region.x = 0;
     embark_screen->world_group.region.y = 1;
-    embark_screen->world_group.region.w = screen_width / 2;
+    embark_screen->world_group.region.w = screen_width / 3;
     embark_screen->world_group.region.h = screen_height - 1;
 
-    embark_screen->regional_group.region.x = screen_width / 2 + 1; // Add column of padding
+    container_space -= embark_screen->world_group.region.w + 1;
+
+    embark_screen->regional_group.region.x = screen_width / 3 + 1; // Add column of padding
     embark_screen->regional_group.region.y = 1;
-    embark_screen->regional_group.region.w = screen_width / 2 - 1; // Account for column of padding
+    embark_screen->regional_group.region.w = screen_width / 3 - 1; // Account for column of padding
     embark_screen->regional_group.region.h = screen_height - 1;
+
+    container_space -= embark_screen->regional_group.region.w + 1;
+
+    embark_screen->info_container.x = screen_width - container_space;
+    embark_screen->info_container.y = 1;
+    embark_screen->info_container.w = container_space;
+    embark_screen->info_container.h = screen_height - 1;
 
     // Create cameras to display world and regional map views
     embark_screen->world_group.camera.x = 0;
@@ -242,25 +292,9 @@ struct EmbarkScreen* embark_screen_new(struct Map* world_map)
 
     embark_screen->map = world_map;
 
-    term_draw_area(
-            embark_screen->world_group.region.x,
-            embark_screen->world_group.region.y,
-            embark_screen->world_group.region.w,
-            embark_screen->world_group.region.h,
-            COL(CLR_DEFAULT),
-            COL(CLR_FOG_OF_WAR),
-            A_NONE_BIT,
-            ' ');
-
-    term_draw_area(
-            embark_screen->regional_group.region.x,
-            embark_screen->regional_group.region.y,
-            embark_screen->regional_group.region.w,
-            embark_screen->regional_group.region.h,
-            COL(CLR_DEFAULT),
-            COL(CLR_FOG_OF_WAR),
-            A_NONE_BIT,
-            ' ');
+    _draw_container(&embark_screen->world_group.region);
+    _draw_container(&embark_screen->regional_group.region);
+    _draw_container(&embark_screen->info_container);
 
     return embark_screen;
 }
@@ -406,14 +440,40 @@ static void _draw_regional_view_map(struct EmbarkScreenGroup* group, struct MapC
     term_draw_symbol(group->cursor.x, group->cursor.y, COL(CLR_BLACK), &map_location->symbol.bg, A_BLINK_BIT | A_BOLD_BIT, '@' );
 }
 
-void embark_screen_draw(struct EmbarkScreen* embark_screen)
+static void _draw_info_view(struct EmbarkScreen* es)
+{
+    const char* title = "Location Info";
+    const int title_len_half = 7;
+    term_draw_text(es->info_container.x + (es->info_container.w / 2) - title_len_half, 0, COL(CLR_WHITE), COL(CLR_DEFAULT), A_NONE_BIT, title);
+
+    _draw_container(&es->info_container);
+
+    if(es->focus_regional)
+    {
+        struct MapLocation* loc = _current_regional_map_loc(es);
+
+        term_draw_ftext(es->info_container.x, 2, COL(CLR_WHITE), COL(CLR_DEFAULT), A_NONE_BIT, "Coordinates: %d, %d", loc->x, loc->y);
+        term_draw_ftext(es->info_container.x, 3, COL(CLR_WHITE), COL(CLR_DEFAULT), A_NONE_BIT, "Biome: %s", biome_name_from_enum(loc->terrain->biome));
+        term_draw_ftext(es->info_container.x, 4, COL(CLR_WHITE), COL(CLR_DEFAULT), A_NONE_BIT, "Elevation: %2.f", loc->terrain->elevation);
+        term_draw_ftext(es->info_container.x, 5, COL(CLR_WHITE), COL(CLR_DEFAULT), A_NONE_BIT, "Precipitation: %2.f", loc->terrain->precipitation);
+    }
+    else
+    {
+        struct MapCell* cell = _current_world_map_cell(es);
+
+        term_draw_ftext(es->info_container.x, 2, COL(CLR_WHITE), COL(CLR_DEFAULT), A_NONE_BIT, "Coordinates: %d, %d", cell->cell_x, cell->cell_y);
+    }
+}
+
+void embark_screen_draw(struct EmbarkScreen* es)
 {
     int wx = -1;
     int wy = -1;
-    _group_cursor_to_world(&embark_screen->world_group, &wx, &wy);
-    struct MapCell* current_cell = map_get_cell_by_cell_coord(embark_screen->map, wx, wy);
+    _group_cursor_to_world(&es->world_group, &wx, &wy);
+    struct MapCell* current_cell = map_get_cell_by_cell_coord(es->map, wx, wy);
 
-    _draw_world_view_map(&embark_screen->world_group, embark_screen->map, embark_screen->layer);
-    _draw_regional_view_map(&embark_screen->regional_group, current_cell, embark_screen->layer);
-    _debug_draw(embark_screen);
+    _draw_world_view_map(&es->world_group, es->map, es->layer);
+    _draw_regional_view_map(&es->regional_group, current_cell, es->layer);
+    _draw_info_view(es);
+    _debug_draw(es);
 }
