@@ -1,5 +1,23 @@
 #include "game/terrain.h"
 
+static const char* BIOME_NAMES[] =
+{
+    "ocean",
+    "beach",
+    "snow",
+    "mountain",
+
+    "tundra",
+    "taiga",
+    "subtropical desert",
+    "temperate grassland",
+    "temperate deciduous forest",
+    "savannah",
+    "tropical seasonal forest",
+    "temperate rain forest",
+    "tropical rain forest"
+};
+
 enum BiomeType biome_from_params(float elevation, float precipitation)
 {
     if(elevation < 0.1f)
@@ -89,4 +107,9 @@ enum BiomeType biome_from_params(float elevation, float precipitation)
     }
 
     return BIOME_TYPE_TROPICAL_RAIN_FOREST;
+}
+
+const char* biome_name_from_enum(enum BiomeType type)
+{
+    return BIOME_NAMES[(int)type];
 }

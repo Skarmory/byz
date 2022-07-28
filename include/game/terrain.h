@@ -28,4 +28,6 @@ struct Terrain
 
 enum BiomeType biome_from_params(float elevation, float precipitation);
 
+const char* biome_name_from_enum(enum BiomeType type);
+
 #endif
