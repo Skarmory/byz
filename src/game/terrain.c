@@ -18,6 +18,23 @@ static const char* BIOME_NAMES[] =
     "tropical rain forest"
 };
 
+static const struct Colour BIOME_COLOURS[] =
+{
+    { 0, 0, 255 },     // Ocean
+    { 235, 245, 20 },  // Beach
+    { 255, 255, 255 }, // Snow
+    { 128, 128, 128 }, // Mountain
+    { 87, 235, 249 },  // Tundra
+    { 5, 102, 33 },    // Taiga
+    { 250, 148, 24 },  // Subtropical desert
+    { 250, 219, 4 },   // Temperate grassland
+    { 46, 177, 83 },   // Temperate deciduous forest
+    { 200, 225, 35 },  // Savannah
+    { 155, 225, 35 },  // Tropical seasonal forest
+    { 80, 220, 65 },   // Temperate rain forest
+    { 8, 250, 54 }    // Tropical rain forest
+};
+
 enum BiomeType biome_from_params(float elevation, float precipitation)
 {
     if(elevation < 0.1f)
@@ -112,4 +129,9 @@ enum BiomeType biome_from_params(float elevation, float precipitation)
 const char* biome_name_from_enum(enum BiomeType type)
 {
     return BIOME_NAMES[(int)type];
+}
+
+struct Colour biome_colour_from_enum(enum BiomeType type)
+{
+    return BIOME_COLOURS[(int)type];
 }

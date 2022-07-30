@@ -199,24 +199,7 @@ static float _get_precipitation(float offset_x, float offset_y, const struct Map
 
 static struct Colour _get_biome_colour(enum BiomeType biome, struct RNG* rng)
 {
-    static const struct Colour BIOME_COLOURS[] =
-    {
-        { 0, 0, 255 },     // Ocean
-        { 235, 245, 20 },  // Beach
-        { 255, 255, 255 }, // Snow
-        { 128, 128, 128 }, // Mountain
-        { 87, 235, 249 },  // Tundra
-        { 5, 102, 33 },    // Taiga
-        { 250, 148, 24 },  // Subtropical desert
-        { 250, 219, 4 },   // Temperate grassland
-        { 46, 177, 83 },   // Temperate deciduous forest
-        { 200, 225, 35 },  // Savannah
-        { 155, 225, 35 },  // Tropical seasonal forest
-        { 80, 220, 65 },   // Temperate rain forest
-        { 8, 250, 54 },    // Tropical rain forest
-    };
-
-    struct Colour c = BIOME_COLOURS[biome];
+    struct Colour c = biome_colour_from_enum(biome);
 
     // Random stagger colours for some variety
     c.r = clamp(c.r + (rng_get(rng) % 20) - 10, 0, 255);

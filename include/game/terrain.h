@@ -1,6 +1,8 @@
 #ifndef BYZ_GAME_TERRAIN_H
 #define BYZ_GAME_TERRAIN_H
 
+#include "core/colour.h"
+
 enum BiomeType
 {
     BIOME_TYPE_OCEAN,
@@ -29,5 +31,6 @@ struct Terrain
 enum BiomeType biome_from_params(float elevation, float precipitation);
 
 const char* biome_name_from_enum(enum BiomeType type);
+struct Colour biome_colour_from_enum(enum BiomeType type);
 
 #endif
