@@ -7,11 +7,13 @@ const char* MSGHIST_FNAME = "msghist.log";
 const char* DEBUGLOG_FNAME = "debug.log";
 const char* TESTLOG_FNAME = "test.log";
 
-FILE* msghist_file;
-FILE* debug_file;
-FILE* test_file;
+struct _LogChannel
+{
+    FILE* file;
+    int indent;
+};
 
-static int indent_level = 0;
+static struct _LogChannel s_log_channels[32];
 
 /**
  * Opens and overwrites all the logging files.
@@ -20,20 +22,28 @@ static int indent_level = 0;
  */
 void init_logs(void)
 {
-    msghist_file = fopen(MSGHIST_FNAME, "w");
-    debug_file = fopen(DEBUGLOG_FNAME, "w");
-    test_file = fopen(TESTLOG_FNAME, "w");
+    s_log_channels[LOG_ID_MSGHIST].file = fopen(MSGHIST_FNAME, "w");
+    s_log_channels[LOG_ID_MSGHIST].indent = 0;
+
+    s_log_channels[LOG_ID_DEBUG].file = fopen(DEBUGLOG_FNAME, "w");
+    s_log_channels[LOG_ID_DEBUG].indent = 0;
+
+    s_log_channels[LOG_ID_TEST].file = fopen(TESTLOG_FNAME, "w");
+    s_log_channels[LOG_ID_TEST].indent = 0;
+
+    s_log_channels[LOG_ID_STDOUT].file = stdout;
+    s_log_channels[LOG_ID_STDOUT].indent = 0;
 }
 
-static void _log_msg(FILE* file, const char* msg)
+static void _log_msg(struct _LogChannel* channel, const char* msg)
 {
-    for(int i = 0; i < indent_level; ++i)
+    for(int i = 0; i < channel->indent; ++i)
     {
-        fprintf(file, "\t");
+        fprintf(channel->file, "\t");
     }
 
-    fprintf(file, "%s\n", msg);
-    fflush(file);
+    fprintf(channel->file, "%s\n", msg);
+    fflush(channel->file);
 }
 
 /**
@@ -43,22 +53,22 @@ void log_msg(LogChannels channels, const char* msg)
 {
     if(bit_flags_has_flags(channels, LOG_MSGHIST))
     {
-        _log_msg(msghist_file, msg);
+        _log_msg(&s_log_channels[LOG_ID_MSGHIST], msg);
     }
 
     if(bit_flags_has_flags(channels, LOG_DEBUG))
     {
-        _log_msg(debug_file, msg);
+        _log_msg(&s_log_channels[LOG_ID_DEBUG], msg);
     }
 
     if(bit_flags_has_flags(channels, LOG_TEST))
     {
-        _log_msg(test_file, msg);
+        _log_msg(&s_log_channels[LOG_ID_TEST], msg);
     }
 
     if(bit_flags_has_flags(channels, LOG_STDOUT))
     {
-        _log_msg(stdout, msg);
+        _log_msg(&s_log_channels[LOG_ID_STDOUT], msg);
     }
 }
 
@@ -92,20 +102,20 @@ void log_scheck_fail(const char* msg)
  */
 void uninit_logs(void)
 {
-    fclose(msghist_file);
-    fclose(debug_file);
-    fclose(test_file);
+    fclose(s_log_channels[LOG_ID_MSGHIST].file);
+    fclose(s_log_channels[LOG_ID_DEBUG].file);
+    fclose(s_log_channels[LOG_ID_TEST].file);
 }
 
-void log_push_indent(void)
+void log_push_indent(enum LogChannelID id)
 {
-    ++indent_level;
+    ++s_log_channels[id].indent;
 }
 
-void log_pop_indent(void)
+void log_pop_indent(enum LogChannelID id)
 {
-    if(indent_level > 0)
+    if(s_log_channels[id].indent > 0)
     {
-        --indent_level;
+        --s_log_channels[id].indent;
     }
 }

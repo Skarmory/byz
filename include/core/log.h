@@ -3,6 +3,14 @@
 
 #include "core/bit_flags.h"
 
+enum LogChannelID
+{
+    LOG_ID_MSGHIST = 0,
+    LOG_ID_DEBUG,
+    LOG_ID_TEST,
+    LOG_ID_STDOUT
+};
+
 enum LogChannel
 {
     LOG_MSGHIST = BIT_FLAG(0),
@@ -17,7 +25,7 @@ void uninit_logs(void);
 void log_msg(LogChannels channels, const char* msg);
 void log_format_msg(LogChannels channels, const char* format, ...);
 void log_scheck_fail(const char* msg);
-void log_push_indent(void);
-void log_pop_indent(void);
+void log_push_indent(enum LogChannelID id);
+void log_pop_indent(enum LogChannelID id);
 
 #endif

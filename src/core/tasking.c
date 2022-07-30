@@ -349,22 +349,22 @@ bool tasker_has_completed_tasks(struct Tasker* tasker)
 void tasker_log_state(struct Tasker* tasker)
 {
     log_msg(LOG_DEBUG, "Tasker state:");
-    log_push_indent();
+    log_push_indent(LOG_ID_DEBUG);
     log_format_msg(LOG_DEBUG, "Pending tasks: %d", tasker->pending_task_count);
     log_format_msg(LOG_DEBUG, "Executing tasks: %d", tasker->executing_task_count);
     log_format_msg(LOG_DEBUG, "Completed tasks: %d", tasker->completed_task_count);
 
     log_msg(LOG_DEBUG, "Threads:");
-    log_push_indent();
+    log_push_indent(LOG_ID_DEBUG);
     for(int i = 0; i < MAX_THREADS; ++i)
     {
         log_format_msg(LOG_DEBUG, "Thread %d", tasker->worker_threads[i].id);
-        log_push_indent();
+        log_push_indent(LOG_ID_DEBUG);
         log_format_msg(LOG_DEBUG, "State: %d", tasker->worker_threads[i].state);
-        log_pop_indent();
+        log_pop_indent(LOG_ID_DEBUG);
     }
-    log_pop_indent();
-    log_pop_indent();
+    log_pop_indent(LOG_ID_DEBUG);
+    log_pop_indent(LOG_ID_DEBUG);
 }
 
 /**
