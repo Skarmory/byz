@@ -7,12 +7,12 @@
 static const float c_perlin_max   = sqrt(2.0f) / 2.0f;
 static const float c_perlin_min   = -c_perlin_max;
 static const float c_perlin_range = 1.0f / (c_perlin_max - c_perlin_min);
+static const unsigned w = 8 * sizeof(unsigned);
+static const unsigned s = w / 2;
+static const float z = 3.14159265f / (float) ~(~0u >> 1);
 
 static void _random_gradient(int x, int y, float* out_x, float* out_y)
 {
-    const unsigned w = 8 * sizeof(unsigned);
-    const unsigned s = w / 2;
-
     unsigned a = x;
     unsigned b = y;
 
@@ -24,7 +24,7 @@ static void _random_gradient(int x, int y, float* out_x, float* out_y)
 
     a *= 2048419325;
 
-    float random = a * (3.14159265 / ~(~0u >> 1));
+    float random = a * z;
 
     *out_x = sin(random);
     *out_y = cos(random);
