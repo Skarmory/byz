@@ -35,6 +35,7 @@ static float _interpolate(float a0, float a1, float w)
     return (a1 - a0) * ((w * (w * 6.0 - 15.0) + 10.0) * w * w * w) + a0;
 }
 
+// Based on algorithm found at: https://en.wikipedia.org/wiki/Perlin_noise
 static float _perlin(float x, float y)
 {
     // Get the for corners of the square that (x, y) lies in
