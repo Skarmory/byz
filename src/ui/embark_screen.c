@@ -358,7 +358,7 @@ static void _draw_location(int screen_i, int screen_j, struct MapLocation* map_l
     {
         if(map_location)
         {
-            int col = clamp((int)(255.f * map_location->terrain->elevation), 0, 255);
+            int col = clamp((int)(255.f * map_location->terrain.elevation), 0, 255);
             struct Colour c = { col, col, col };
             term_draw_symbol(screen_i, screen_j, COL(CLR_DEFAULT), &c, 0, ' ');
         }
@@ -453,9 +453,9 @@ static void _draw_info_view(struct EmbarkScreen* es)
         struct MapLocation* loc = _current_regional_map_loc(es);
 
         term_draw_ftext(es->info_container.x, 2, COL(CLR_WHITE), COL(CLR_DEFAULT), A_NONE_BIT, "Coordinates: %d, %d", loc->x, loc->y);
-        term_draw_ftext(es->info_container.x, 3, COL(CLR_WHITE), COL(CLR_DEFAULT), A_NONE_BIT, "Biome: %s", biome_name_from_enum(loc->terrain->biome));
-        term_draw_ftext(es->info_container.x, 4, COL(CLR_WHITE), COL(CLR_DEFAULT), A_NONE_BIT, "Elevation: %2.f", loc->terrain->elevation);
-        term_draw_ftext(es->info_container.x, 5, COL(CLR_WHITE), COL(CLR_DEFAULT), A_NONE_BIT, "Precipitation: %2.f", loc->terrain->precipitation);
+        term_draw_ftext(es->info_container.x, 3, COL(CLR_WHITE), COL(CLR_DEFAULT), A_NONE_BIT, "Biome: %s", biome_name_from_enum(loc->terrain.biome));
+        term_draw_ftext(es->info_container.x, 4, COL(CLR_WHITE), COL(CLR_DEFAULT), A_NONE_BIT, "Elevation: %2.f", loc->terrain.elevation);
+        term_draw_ftext(es->info_container.x, 5, COL(CLR_WHITE), COL(CLR_DEFAULT), A_NONE_BIT, "Precipitation: %2.f", loc->terrain.precipitation);
     }
     else
     {
