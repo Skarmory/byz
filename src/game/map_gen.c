@@ -24,14 +24,8 @@
 #include <string.h>
 #include <time.h>
 
-#define ELEVATION_MODULO 1000000
-#define PRECIPITATION_MODULO 7364759
-
-enum MapType
-{
-    MAP_TYPE_WORLD,
-    MAP_TYPE_REGIONAL
-};
+#define ELEVATION_MODULO 100000000
+#define PRECIPITATION_MODULO ELEVATION_MODULO
 
 struct MapGenArgs
 {
@@ -41,12 +35,11 @@ struct MapGenArgs
     int precipitation_seed_y;
 };
 
-struct GenMapCellTaskArgs
+struct _gen_map_cells_TaskArgs
 {
-    struct MapCell* cell_gen;
-    const struct MapLocation* loc_ref;
-    const struct MapGenArgs* map_gen_args;
-    float step_size;
+    struct Map* map;
+    int x;
+    struct MapGenArgs* map_gen_args;
 };
 
 //enum MAP_EDGE
@@ -244,14 +237,14 @@ static struct Colour _get_biome_colour(enum BiomeType biome, struct RNG* rng)
 //    float vegetation_x = (((float)loc->x) +  map_seed + 0.5f) / c_vegetation_divisor;
 //    float vegetation_y = (((float)loc->y) +  map_seed + 0.5f) / c_vegetation_divisor;
 //
-//    loc->terrain->vegetation = perlin(vegetation_x, vegetation_y);
+//    loc->terrain.vegetation = perlin(vegetation_x, vegetation_y);
 //
-//    if(loc->terrain->elevation < 0.2f)
+//    if(loc->terrain.elevation < 0.2f)
 //    {
 //        return;
 //    }
 //
-//    if(loc->terrain->vegetation >= c_shrub_range_start && loc->terrain->vegetation < c_shrub_range_end)
+//    if(loc->terrain.vegetation >= c_shrub_range_start && loc->terrain.vegetation < c_shrub_range_end)
 //    {
 //        loc->symbol.fg = *COL(CLR_LGREEN);
 //
@@ -279,7 +272,7 @@ static struct Colour _get_biome_colour(enum BiomeType biome, struct RNG* rng)
 //        //loc->symbol.fg.b = clamp(loc->symbol.fg.b + (rng_get(rng) % 30) - 15, 0, 255);
 //
 //    }
-//    else if(loc->terrain->vegetation >= c_tree_range_start && loc->terrain->vegetation < c_tree_range_end)
+//    else if(loc->terrain.vegetation >= c_tree_range_start && loc->terrain.vegetation < c_tree_range_end)
 //    {
 //        loc->symbol.fg = *COL(CLR_LGREEN);
 //
@@ -304,35 +297,6 @@ static struct Colour _get_biome_colour(enum BiomeType biome, struct RNG* rng)
 //    log_format_msg(LOG_DEBUG, "%d %d %d", loc->symbol.fg.r, loc->symbol.fg.g, loc->symbol.fg.b);
 //}
 
-//static void _gen_map_cell(struct MapCell* cell, const struct MapLocation* loc_ref, const struct MapGenArgs* map_gen_args, float step_size)
-//{
-//    struct RNG* rng = rng_new(cell->seed);
-//
-//    for(int rx = 0; rx < g_map_cell_width; ++rx)
-//    for(int ry = 0; ry < g_map_cell_height; ++ry)
-//    {
-//        struct MapLocation* loc = map_cell_get_location_relative(cell, rx, ry);
-//
-//        float offset_x = (float)loc_ref->x + ((float)rx * step_size);
-//        float offset_y = (float)loc_ref->y + ((float)ry * step_size);
-//
-//        _set_elevation(loc, offset_x, offset_y, map_gen_args);
-//        _set_precipitation(loc, offset_x, offset_y, map_gen_args);
-//        _set_biome(loc->terrain);
-//
-//        _colour_biome(loc, rng);
-//    }
-//
-//    rng_free(rng);
-//}
-
-//static int _gen_map_cell_task_func(void* args)
-//{
-//    struct GenMapCellTaskArgs* cast_args = args;
-//    _gen_map_cell(cast_args->cell_gen, cast_args->loc_ref, cast_args->map_gen_args, cast_args->step_size);
-//    return TASK_STATUS_SUCCESS;
-//}
-
 static struct MapGenArgs _get_map_gen_args(struct RNG* rng)
 {
     struct MapGenArgs map_gen_args;
@@ -345,42 +309,121 @@ static struct MapGenArgs _get_map_gen_args(struct RNG* rng)
     return map_gen_args;
 }
 
-//static void _gen_map(enum MapType map_type, struct Map* map, const struct MapLocation* loc_ref, float scale)
-//{
-//    struct RNG* rng = rng_new(map->seed);
-//
-//    struct MapGenArgs map_gen_args = _get_map_gen_args_from_seed(rng);
-//
-//    for(int x = 0; x < map->width; ++x)
-//    for(int y = 0; y < map->height; ++y)
-//    {
-//        struct MapCell* cell = map_get_cell_by_cell_coord(map, x, y);
-//        cell->seed = rng_get(rng);
-//
-//        char task_name[256];
-//        snprintf(task_name, 256, "Generate Map Cell %d, %d", x, y);
-//        struct GenMapCellTaskArgs task_args = {
-//            cell,
-//            map_type == MAP_TYPE_WORLD ? map_cell_get_location_relative(cell, 0, 0) : loc_ref,
-//            &map_gen_args,
-//            scale
-//        };
-//
-//        struct Task* task = task_new(task_name, &_gen_map_cell_task_func, NULL, &task_args, sizeof(struct GenMapCellTaskArgs));
-//        tasker_add_task(g_tasker, task);
-//    }
-//
-//    tasker_sync(g_tasker);
-//    tasker_integrate(g_tasker);
-//
-//    rng_free(rng);
-//}
+void _gen_map_cell_no_locs(struct MapCell* cell, struct MapGenArgs* map_gen_args)
+{
+    const float step_size = 1.0f / g_map_cell_width;
+    const int stride_x = g_map_cell_width / 4;
+    const int stride_y = g_map_cell_height / 4;
 
-//void gen_regional_map(struct Map* regional_map, const struct MapLocation* world_loc_ref)
-//{
-//    const float scale = 1.0f / (float)g_map_cell_width;
-//    _gen_map(MAP_TYPE_REGIONAL, regional_map, world_loc_ref, scale);
-//}
+    struct RNG* rng = rng_new(cell->seed);
+
+    float avg_precipitation = 0.0f;
+    float avg_elevation = 0.0f;
+
+    // Sample 16 points across the cell to get an idea for avg values
+    for(int rx = 0; rx < g_map_cell_width; rx+=stride_x)
+    for(int ry = 0; ry < g_map_cell_height; ry+=stride_y)
+    {
+        float offset_x = (float)cell->cell_x + ((float)rx * step_size);
+        float offset_y = (float)cell->cell_y + ((float)ry * step_size);
+
+        avg_elevation += _get_elevation(offset_x, offset_y, map_gen_args);
+        avg_precipitation += _get_precipitation(offset_x, offset_y, map_gen_args);
+    }
+
+    cell->terrain.elevation = avg_elevation / 16.0f;
+    cell->terrain.precipitation = avg_precipitation / 16.0f;
+    cell->terrain.biome = biome_from_params(cell->terrain.elevation, cell->terrain.precipitation);
+
+    struct Colour c = _get_biome_colour(cell->terrain.biome, rng);
+    cell->symbol.bg = c;
+    cell->symbol.fg = *COL(CLR_DEFAULT);
+    cell->symbol.sym = ' ';
+
+    rng_free(rng);
+}
+
+void _gen_map_cell_locs(struct MapCell* cell, struct MapGenArgs* map_gen_args)
+{
+    const float step_size = 1.0f / g_map_cell_width;
+
+    map_cell_init(cell);
+
+    struct RNG* rng = rng_new(cell->seed);
+
+    for(int rx = 0; rx < g_map_cell_width; ++rx)
+    for(int ry = 0; ry < g_map_cell_height; ++ry)
+    {
+        struct MapLocation* loc = map_cell_get_location_relative(cell, rx, ry);
+        loc->x = cell->cell_x * g_map_cell_width + rx;
+        loc->y = cell->cell_y * g_map_cell_height + ry;
+
+        float offset_x = (float)cell->cell_x + ((float)rx * step_size);
+        float offset_y = (float)cell->cell_y + ((float)ry * step_size);
+
+        loc->terrain.elevation = _get_elevation(offset_x, offset_y, map_gen_args);
+        loc->terrain.precipitation = _get_precipitation(offset_x, offset_y, map_gen_args);
+        loc->terrain.biome = biome_from_params(loc->terrain.elevation, loc->terrain.precipitation);
+
+        struct Colour c = _get_biome_colour(loc->terrain.biome, rng);
+        loc->symbol.bg = c;
+        loc->symbol.fg = *COL(CLR_DEFAULT);
+        loc->symbol.sym = ' ';
+    }
+
+    rng_free(rng);
+}
+
+static int _gen_map_cells_task_func(void* args)
+{
+    struct _gen_map_cells_TaskArgs* cargs = args;
+    for(int y = 0; y < cargs->map->height; ++y)
+    {
+        log_format_msg(LOG_DEBUG, "Gen map cell %d, %d", cargs->x, y);
+
+        struct MapCell* cell = map_get_cell_by_cell_coord(cargs->map, cargs->x, y);
+        _gen_map_cell_no_locs(cell, cargs->map_gen_args);
+    }
+
+    return TASK_STATUS_SUCCESS;
+};
+
+static int _gen_map_cells_task_cbfunc(void* args)
+{
+    struct _gen_map_cells_TaskArgs* cargs = args;
+    log_format_msg(LOG_DEBUG, "Gen map cells [%d, (0 - %d)] complete", cargs->x, cargs->map->height - 1);
+
+    return TASK_STATUS_SUCCESS;
+}
+
+static void _make_gen_map_cells_task(struct Map* map, int x, struct MapGenArgs* args)
+{
+    struct _gen_map_cells_TaskArgs targs;
+    targs.map = map;
+    targs.x = x;
+    targs.map_gen_args = args;
+
+    char task_name[256];
+    snprintf(task_name, 256, "Gen Map Cells Task: %d", x);
+    struct Task* task = task_new(
+        task_name,
+        &_gen_map_cells_task_func,
+        &_gen_map_cells_task_cbfunc,
+        &targs,
+        sizeof(struct _gen_map_cells_TaskArgs)
+    );
+
+    tasker_add_task(g_tasker, task);
+}
+
+void gen_map_cell(struct Map* map, struct MapCell* cell)
+{
+    struct RNG* rng = rng_new(map->seed);
+    struct MapGenArgs gen_args = _get_map_gen_args(rng);
+    rng_free(rng);
+
+    _gen_map_cell_locs(cell, &gen_args);
+}
 
 void gen_map(struct Map* map)
 {
@@ -392,23 +435,20 @@ void gen_map(struct Map* map)
     {
         struct MapCell* cell = map_get_cell_by_cell_coord(map, x, y);
         cell->seed = rng_get(rng);
-
-        float x_seed = (float)(cell->cell_x);
-        float y_seed = (float)(cell->cell_y);
-
-        float elevation = _get_elevation(x_seed, y_seed, &map_gen_args);
-        float precipitation = _get_precipitation(x_seed, y_seed, &map_gen_args);
-        enum BiomeType biome = biome_from_params(elevation, precipitation);
-
-        struct Colour c = _get_biome_colour(biome, rng);
-        cell->symbol.bg = c;
-        cell->symbol.fg = *COL(CLR_DEFAULT);
-        cell->symbol.sym = ' ';
     }
 
     rng_free(rng);
 
-    //_gen_map(MAP_TYPE_WORLD, map, NULL, 1.0f);
+    for(int x = 0; x < map->width; ++x)
+    {
+        log_format_msg(LOG_DEBUG, "Generating cells [%d, (0 - %d)]", x, map->height - 1);
+
+        // Gen the cell so we can calculate the average terrain values for this cell
+        _make_gen_map_cells_task(map, x, &map_gen_args);
+    }
+
+    tasker_sync(g_tasker);
+    tasker_log_state(g_tasker);
 
     //// Connect up the connectivity across cells
     //for(int x = 0; x < map->width; ++x)
@@ -439,45 +479,4 @@ void gen_map(struct Map* map)
     //}
 
     //rng_free(rng);
-}
-
-void _gen_map_cell(struct MapCell* cell, struct MapGenArgs* map_gen_args)
-{
-    const float step_size = 1.0f / g_map_cell_width;
-
-    cell->locs = malloc(g_map_cell_width * g_map_cell_height * sizeof(struct MapLocation));
-
-    struct RNG* rng = rng_new(cell->seed);
-
-    for(int rx = 0; rx < g_map_cell_width; ++rx)
-    for(int ry = 0; ry < g_map_cell_height; ++ry)
-    {
-        struct MapLocation* loc = map_cell_get_location_relative(cell, rx, ry);
-        loc->x = cell->cell_x * g_map_cell_width + rx;
-        loc->y = cell->cell_y * g_map_cell_height + ry;
-        loc->terrain = malloc(sizeof(struct Terrain));
-
-        float offset_x = (float)cell->cell_x + ((float)rx * step_size);
-        float offset_y = (float)cell->cell_y + ((float)ry * step_size);
-
-        loc->terrain->elevation = _get_elevation(offset_x, offset_y, map_gen_args);
-        loc->terrain->precipitation = _get_precipitation(offset_x, offset_y, map_gen_args);
-        loc->terrain->biome = biome_from_params(loc->terrain->elevation, loc->terrain->precipitation);
-
-        struct Colour c = _get_biome_colour(loc->terrain->biome, rng);
-        loc->symbol.bg = c;
-        loc->symbol.fg = *COL(CLR_DEFAULT);
-        loc->symbol.sym = ' ';
-    }
-
-    rng_free(rng);
-}
-
-void gen_map_cell(struct Map* map, struct MapCell* cell)
-{
-    struct RNG* rng = rng_new(map->seed);
-    struct MapGenArgs gen_args = _get_map_gen_args(rng);
-    rng_free(rng);
-
-    _gen_map_cell(cell, &gen_args);
 }
