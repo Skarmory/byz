@@ -75,6 +75,16 @@ void map_cell_free(struct MapCell* cell)
     free(cell);
 }
 
+void map_cell_init(struct MapCell* cell)
+{
+    cell->locs = malloc(g_map_cell_width * g_map_cell_height * sizeof(struct MapLocation));
+}
+
+void map_cell_uninit(struct MapCell* cell)
+{
+    free(cell->locs);
+}
+
 struct MapLocation* map_cell_get_location(struct MapCell* cell, int x, int y)
 {
     if(map_cell_is_in_bounds(cell, x, y))
