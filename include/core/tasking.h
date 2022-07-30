@@ -19,7 +19,6 @@ enum TaskStatus
 
 struct Tasker* tasker_new(void);
 void tasker_free(struct Tasker* tasker);
-//void tasker_integrate(struct Tasker* tasker);
 bool tasker_add_task(struct Tasker* tasker, struct Task* task);
 void tasker_sync(struct Tasker* tasker);
 bool tasker_has_pending_tasks(struct Tasker* tasker);

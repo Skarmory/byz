@@ -183,7 +183,6 @@ static int _thread_update(struct Thread* thread)
         }
 
         --thread->tasker->executing_task_count;
-        ++thread->tasker->completed_task_count;
 
         expect = THREAD_STATE_IDLE;
     }
@@ -255,34 +254,6 @@ void tasker_free(struct Tasker* tasker)
 
     free(tasker);
 }
-
-/**
- * Execute the callback functions for completed tasks and clear them out.
- */
-//void tasker_integrate(struct Tasker* tasker)
-//{
-//    if(tasker->completed_task_count == 0)
-//    {
-//        return;
-//    }
-//
-//    mtx_lock(&tasker->complete_list_lock);
-//    {
-//        struct ListNode *node, *next;
-//        list_for_each_safe(&tasker->complete_list, node, next)
-//        {
-//            struct Task* task = node->data;
-//            //if(task->cb_func)
-//            //{
-//            //    task->cb_func(task->args);
-//            //}
-//
-//            list_rm(&tasker->complete_list, node);
-//            task_free(task);
-//        }
-//    }
-//    mtx_unlock(&tasker->complete_list_lock);
-//}
 
 /**
  * Add a task to the tasker's list, and signal a thread to awaken.
