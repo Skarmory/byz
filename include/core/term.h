@@ -15,15 +15,6 @@ enum TextAttributeFlag
 };
 typedef unsigned int TextAttributeFlags;
 
-enum TextAttribute
-{
-    A_NONE       = 0,
-    A_BOLD       = 1,
-    A_UNDERSCORE = 4,
-    A_BLINK      = 5,
-    A_REVERSE    = 7
-};
-
 void term_init(void);
 void term_uninit(void);
 
@@ -32,6 +23,7 @@ void term_set_cursor(bool on);
 void term_set_echo(bool state);
 void term_set_canon(bool state);
 void term_set_sigint_callback(void(*sig)(int));
+void term_resize(void);
 
 void term_clear(void);
 void term_clear_area(int x, int y, int w, int h);

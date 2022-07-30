@@ -24,11 +24,13 @@ int         g_cy = 0;
 /**
  * Creates the map and sets map locations to default values
  */
-struct Map* map_new(int width, int height)
+struct Map* map_new(int width, int height, int seed)
 {
     struct Map* map = malloc(sizeof(struct Map));
     map->width = width;
     map->height = height;
+    map->seed = seed;
+
     list_init(&map->cell_list);
 
     return map;
@@ -93,4 +95,10 @@ struct MapLocation* map_get_location(struct Map* map, int x, int y)
 bool map_in_bounds(struct Map* map, int x, int y)
 {
     return map_get_location(map, x, y) != NULL;
+}
+
+bool map_in_bounds_cell(struct Map* map, int cx, int cy)
+{
+    return cx >= 0 && cx < map->width &&
+           cy >= 0 && cy < map->height;
 }

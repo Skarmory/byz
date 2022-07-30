@@ -8,19 +8,23 @@ struct UIBox* ui_box_new(int x, int y, int w, int h)
 {
     struct UIBox* ui_box = malloc(sizeof(struct UIBox));
 
+    ui_box_init(ui_box, x, y, w, h);
+
+    return ui_box;
+}
+
+void ui_box_init(struct UIBox* ui_box, int x, int y, int w, int h)
+{
     ui_box->x = x;
     ui_box->y = y;
     ui_box->w = w;
     ui_box->h = h;
-
-    return ui_box;
 }
 
 void ui_box_free(struct UIBox* ui_box)
 {
     free(ui_box);
 }
-
 
 void ui_box_draw(struct UIBox* box, bool invalidate_inner_area)
 {

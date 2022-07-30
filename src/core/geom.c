@@ -107,6 +107,14 @@ bool geom_point_in_rect(int px, int py, int rx, int ry, int w, int h)
     return (px >= rx && px <= (rx + w) && py >= ry && py <= (ry + h));
 }
 
+bool geom_rect_in_rect(int rx0, int ry0, int rw0, int rh0, int rx1, int ry1, int rw1, int rh1)
+{
+    return rx0 > rx1 &&
+           ry0 > ry1 &&
+           rx0 + rw0 < rx1 + rw1 &&
+           ry0 + rh0 < ry1 + rh1;
+}
+
 void geom_dbg_log_line(struct Line* line, const char* line_name)
 {
     log_format_msg(LOG_DEBUG, "Debugging line: %s", line_name);

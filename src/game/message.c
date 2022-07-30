@@ -25,7 +25,6 @@ void _flush_and_prompt(void)
 
     // Redraw visual info
     // This will show the partial updates for the turn up to this prompt
-    display_main_screen();
     term_refresh();
 
     term_wait_on_input();

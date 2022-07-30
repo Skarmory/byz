@@ -47,3 +47,19 @@ bool camera_screen_to_world(struct camera* camera, int screen_x, int screen_y, i
 
     return true;
 }
+
+bool camera_relative_to_world(struct camera* camera, int rx, int ry, int* out_world_x, int* out_world_y)
+{
+    int wx = camera->x + rx;
+    int wy = camera->y + ry;
+
+    if(!camera_in_bounds(camera, wx, wy))
+    {
+        return false;
+    }
+
+    *out_world_x = wx;
+    *out_world_y = wy;
+
+    return true;
+}

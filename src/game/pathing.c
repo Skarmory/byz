@@ -8,14 +8,15 @@
 #include "game/movement.h"
 
 #include <stddef.h>
-#include <math.h>
 
 // TODO: Implement a sorted linked list?
+//
+// TODO: This won't work multithreaded, make it multithreaded
 
 static int         generation_id = 0;
 static struct List open_list;
 
-static void _add_open_node(struct CONNECTIVITY_NODE* node)
+static void _add_open_node(struct ConnectivityNode* node)
 {
 #ifdef DEBUG_PATHING
     log_format_msg(LOG_DEBUG, "Adding to open list: (%d, %d)", node->x, node->y);
@@ -24,7 +25,7 @@ static void _add_open_node(struct CONNECTIVITY_NODE* node)
 
     node->pathing_data.state = PATHING_NODE_STATE_OPEN;
 
-    struct CONNECTIVITY_NODE* comp = list_peek_head(&open_list);
+    struct ConnectivityNode* comp = list_peek_head(&open_list);
     if(!comp)
     {
 #ifdef DEBUG_PATHING
@@ -80,7 +81,7 @@ static void _add_open_node(struct CONNECTIVITY_NODE* node)
 #endif
 }
 
-static void _reset_node(struct CONNECTIVITY_NODE* node)
+static void _reset_node(struct ConnectivityNode* node)
 {
     node->pathing_data.from          = NULL;
     node->pathing_data.to            = NULL;
@@ -89,19 +90,17 @@ static void _reset_node(struct CONNECTIVITY_NODE* node)
     node->pathing_data.state         = PATHING_NODE_STATE_UNVISITED;
 }
 
-static struct CONNECTIVITY_NODE* _find_path(struct CONNECTIVITY_NODE* dest, PathingFlags pather_flags, evaluation_func eval_f)
+static struct ConnectivityNode* _find_path(struct ConnectivityNode* dest, PathingFlags pather_flags, evaluation_func eval_f)
 {
     const int iterations_max = 1000;
     int iterations = 0;
 
-    struct CONNECTIVITY_NODE* best_node = NULL;
+    struct ConnectivityNode* best_node = NULL;
 
     while(!list_empty(&open_list) && iterations < iterations_max)
     {
         best_node = list_pop_head(&open_list);
         best_node->pathing_data.state = PATHING_NODE_STATE_CLOSED;
-
-        // Reached destination, return
         if(best_node->x == dest->x && best_node->y == dest->y)
         {
             break;
@@ -110,7 +109,7 @@ static struct CONNECTIVITY_NODE* _find_path(struct CONNECTIVITY_NODE* dest, Path
         struct ListNode* connection_list_node = NULL;
         list_for_each(best_node->connections, connection_list_node)
         {
-            struct CONNECTIVITY_NODE* node = connection_list_node->data;
+            struct ConnectivityNode* node = connection_list_node->data;
 
             // Check to see if this is a stale node (if it was last visited in a previous turn or a previous pathing request this turn)
             // It it technically possible for a stale node clash to occur, if we do INT_MAX worth of requests in a single turn (unlikely)
@@ -155,7 +154,7 @@ static struct CONNECTIVITY_NODE* _find_path(struct CONNECTIVITY_NODE* dest, Path
     return best_node;
 }
 
-static void _make_path_list(struct CONNECTIVITY_NODE* node, struct List* out_path)
+static void _make_path_list(struct ConnectivityNode* node, struct List* out_path)
 {
     while(node)
     {
@@ -173,7 +172,7 @@ static void _log_open_list(void)
     struct ListNode* node = NULL;
     list_for_each(&open_list, node)
     {
-        struct CONNECTIVITY_NODE* conn = node->data;
+        struct ConnectivityNode* conn = node->data;
 
         log_format_msg(LOG_DEBUG, "(%d, %d)", conn->x, conn->y);
     }
@@ -181,7 +180,7 @@ static void _log_open_list(void)
     log_pop_indent();
 }
 
-static void _log_path(struct CONNECTIVITY_NODE* node)
+static void _log_path(struct ConnectivityNode* node)
 {
     log_push_indent();
 
@@ -196,30 +195,7 @@ static void _log_path(struct CONNECTIVITY_NODE* node)
 }
 #endif
 
-float creature_manhatten_evaluation(struct CONNECTIVITY_NODE* node, struct CONNECTIVITY_NODE* dest, PathingFlags pather_flags)
-{
-    // Special handling for the destination
-    if(node->x == dest->x && node->y == dest->y)
-    {
-        return -INFINITY;
-    }
-
-    // Check to see whether the pather can use this location
-    if(!pathing_can_path(node->pathing_flags, pather_flags))
-    {
-        // Cannot path to this node, so make it ridicuously high evaluation
-        return INFINITY;
-    }
-
-    // Use distance squared to avoid sqrt
-    float _x = dest->x - node->x;
-    float _y = dest->y - node->y;
-    float dist2 = _x * _x + _y * _y;
-
-    return dist2 + node->weight;
-}
-
-void pathing_find_path(struct CONNECTIVITY_NODE* restrict start, struct CONNECTIVITY_NODE* restrict end, PathingFlags pather_flags, evaluation_func eval_f, struct List* out_path)
+void pathing_find_path(struct ConnectivityNode* restrict start, struct ConnectivityNode* restrict end, PathingFlags pather_flags, evaluation_func eval_f, struct List* out_path)
 {
     ++generation_id;
 
@@ -238,7 +214,7 @@ void pathing_find_path(struct CONNECTIVITY_NODE* restrict start, struct CONNECTI
     _add_open_node(start);
 
     // This is as far as the path goes, maybe it's the destination, or as close as we can get
-    struct CONNECTIVITY_NODE* path_end = _find_path(end, pather_flags, eval_f);
+    struct ConnectivityNode* path_end = _find_path(end, pather_flags, eval_f);
     _make_path_list(path_end, out_path);
 
 #if DEBUG_PATHING

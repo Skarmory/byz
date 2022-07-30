@@ -118,7 +118,6 @@ void console(void)
         }
 
         _parse_and_execute(in_command);
-        display_main_screen();
     }
     while(true);
 }

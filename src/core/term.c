@@ -1,5 +1,6 @@
 #include "core/term.h"
 
+#include "core/bit_flags.h"
 #include "core/colour.h"
 #include "core/log.h"
 
@@ -32,18 +33,29 @@
 
 #define c_foreground "38"
 #define c_background "48"
+#define c_default_foreground "39"
 #define c_default_background "49"
 #define c_true_colour "2"
 #define c_no_true_colour "5"
 #define c_rgb_format "%d" c_sep "%d" c_sep "%d"
-#define c_colour(ground) ground c_sep c_true_colour c_sep c_rgb_format c_graphics_mode
-#define c_colour_fg_format c_escape c_escape_kind c_colour(c_foreground)
-#define c_colour_bg_format c_escape c_escape_kind c_colour(c_background)
-#define c_colour_default_bg c_escape c_escape_kind c_default_background c_graphics_mode
+#define c_colour(ground) ground c_sep c_true_colour c_sep c_rgb_format
+#define c_colour_fg_format c_colour(c_foreground)
+#define c_colour_bg_format c_colour(c_background)
+#define c_colour_default_fg c_default_foreground
+#define c_colour_default_bg c_default_background
 
-#define c_attribute_format c_escape c_escape_kind "%d" c_graphics_mode
+#define c_attribute_format "%d"
 
 #define c_default c_escape c_escape_kind "0" c_graphics_mode
+
+enum TextAttribute
+{
+    A_NONE       = 0,
+    A_BOLD       = 1,
+    A_UNDERSCORE = 4,
+    A_BLINK      = 5,
+    A_REVERSE    = 7
+};
 
 struct
 {
@@ -78,9 +90,14 @@ static void _writef(const char* format, ...)
     va_start(args, format);
 
     vsnprintf(write_buffer.buffer + write_buffer.buffer_len, PRINT_BUFFER_SIZE - write_buffer.buffer_len, format, args);
-    write_buffer.buffer_len += strlen(write_buffer.buffer + write_buffer.buffer_len);
 
     va_end(args);
+
+    int add_len = strlen(write_buffer.buffer + write_buffer.buffer_len);
+#ifdef DEBUG_LOG_TERMINAL
+    log_format_msg(LOG_DEBUG, "\t%s", write_buffer.buffer + write_buffer.buffer_len);
+#endif
+    write_buffer.buffer_len += add_len;
 }
 
 static void _flush(void)
@@ -89,34 +106,9 @@ static void _flush(void)
     write_buffer.buffer_len = 0;
 }
 
-static void _term_resize(void)
-{
-    struct winsize ws = { 0 };
-    ioctl(1, TIOCGWINSZ, &ws);
-
-    vterm->width  = ws.ws_col;
-    vterm->height = ws.ws_row;
-
-    struct VTermSymbol* new_sym = realloc(vterm->symbols, vterm->width * vterm->height * sizeof(struct VTermSymbol));
-    if(!new_sym)
-    {
-        // Couldn't realloc the memory, which means something bad has happened.
-        // Cannot really continue from this situation so just die.
-        abort();
-    }
-
-    vterm->symbols = new_sym;
-}
-
 static inline struct VTermSymbol* _term_get_symbol(int x, int y)
 {
     return &vterm->symbols[y * vterm->width + x];
-}
-
-static void _term_resize_signal_handler(int _)
-{
-    (void)_;
-    _term_resize();
 }
 
 static inline bool _should_redraw(struct VTermSymbol* symbol, char new_symbol, struct Colour* new_fg, struct Colour* new_bg, TextAttributeFlags new_ta_flags)
@@ -204,6 +196,70 @@ void term_set_sigint_callback(void(*handler)(int))
     signal(SIGINT, handler);
 }
 
+void term_resize(void)
+{
+    struct winsize ws = { 0 };
+    ioctl(1, TIOCGWINSZ, &ws);
+
+    vterm->width  = ws.ws_col;
+    vterm->height = ws.ws_row;
+
+    struct VTermSymbol* new_sym = realloc(vterm->symbols, vterm->width * vterm->height * sizeof(struct VTermSymbol));
+    if(!new_sym)
+    {
+        // Couldn't realloc the memory, which means something bad has happened.
+        // Cannot really continue from this situation so just die.
+        abort();
+    }
+
+    memset(new_sym, 0, vterm->width * vterm->height * sizeof(struct VTermSymbol));
+    vterm->symbols = new_sym;
+}
+
+static void _write_attribute(enum TextAttribute attribute, bool semicolon)
+{
+    if(semicolon)
+    {
+        _writef(c_sep);
+    }
+
+    _writef(c_attribute_format, attribute);
+}
+
+static void _write_fg_colour(struct Colour* fg, bool semicolon)
+{
+    if(semicolon)
+    {
+        _writef(c_sep);
+    }
+
+    if(fg->r == -1)
+    {
+        _writef(c_default_foreground);
+    }
+    else
+    {
+        _writef(c_colour_fg_format, fg->r, fg->g, fg->b);
+    }
+}
+
+static void _write_bg_colour(struct Colour* bg, bool semicolon)
+{
+    if(semicolon)
+    {
+        _writef(c_sep);
+    }
+
+    if(bg->r == -1)
+    {
+        _writef(c_default_background);
+    }
+    else
+    {
+        _writef(c_colour_bg_format, bg->r, bg->g, bg->b);
+    }
+}
+
 void term_refresh(void)
 {
     struct VTermSymbol* sym = NULL;
@@ -229,33 +285,54 @@ void term_refresh(void)
         lx = x;
         ly = y;
 
+        // Start graphics mode
+        bool semicolon = false;
+        _writef(c_escape);
+        _writef(c_escape_kind);
+
         // Set attributes
-        _writef(c_attribute_format, A_NONE);
+        //_writef(c_attribute_format, A_NONE);
         if(sym->ta_flags != A_NONE_BIT)
         {
-            if(sym->ta_flags & A_BOLD_BIT)       _writef(c_attribute_format, A_BOLD);
-            if(sym->ta_flags & A_UNDERSCORE_BIT) _writef(c_attribute_format, A_UNDERSCORE);
-            if(sym->ta_flags & A_BLINK_BIT)      _writef(c_attribute_format, A_BLINK);
-            if(sym->ta_flags & A_REVERSE_BIT)    _writef(c_attribute_format, A_REVERSE);
-        }
+            if(sym->ta_flags & A_BOLD_BIT)
+            {
+                _write_attribute(A_BOLD, semicolon);
+                semicolon = true;
+            }
 
-        // Set colours
-        if(sym->fg.r != -1)
-        {
-            _writef(c_colour_fg_format, sym->fg.r, sym->fg.g, sym->fg.b);
-        }
+            if(sym->ta_flags & A_UNDERSCORE_BIT)
+            {
+                _write_attribute(A_UNDERSCORE, semicolon);
+                semicolon = true;
+            }
 
-        if(sym->bg.r != -1)
-        {
-            _writef(c_colour_bg_format, sym->bg.r, sym->bg.g, sym->bg.b);
+            if(sym->ta_flags & A_BLINK_BIT)
+            {
+                _write_attribute(A_BLINK, semicolon);
+                semicolon = true;
+            }
+
+            if(sym->ta_flags & A_REVERSE_BIT)
+            {
+                _write_attribute(A_REVERSE, semicolon);
+                semicolon = true;
+            }
         }
         else
         {
-            _writef(c_colour_default_bg);
+            _write_attribute(A_NONE, semicolon);
+            semicolon = true;
         }
+
+        // Set colours
+        _write_fg_colour(&sym->fg, semicolon);
+        _write_bg_colour(&sym->bg, semicolon);
+
+        _writef(c_graphics_mode);
 
         // Write symbol
         _writef("%c", sym->symbol);
+        _writef(c_default);
 
         sym->redraw = false;
     }
@@ -286,9 +363,9 @@ void term_set_attr(int x, int y, TextAttributeFlags ta_flags)
 {
     struct VTermSymbol* sym = _term_get_symbol(x, y);
 
-    if((sym->ta_flags | ta_flags) != sym->ta_flags)
+    if(!bit_flags_has_flags(sym->ta_flags, ta_flags))
     {
-        sym->ta_flags |= ta_flags;
+        bit_flags_set_flags(sym->ta_flags, ta_flags);
         sym->redraw = true;
     }
 }
@@ -297,9 +374,9 @@ void term_unset_attr(int x, int y, TextAttributeFlags ta_flags)
 {
     struct VTermSymbol* sym = _term_get_symbol(x, y);
 
-    if((sym->ta_flags | ta_flags) != sym->ta_flags)
+    if(bit_flags_has_flags(sym->ta_flags, ta_flags))
     {
-        sym->ta_flags &= ~ta_flags;
+        bit_flags_unset_flags(sym->ta_flags, ta_flags);
         sym->redraw = true;
     }
 }
@@ -344,13 +421,12 @@ void term_init(void)
     t.c_lflag &= (~ECHO & ~ICANON);
     tcsetattr(1, TCSANOW, &t);
 
-    _term_resize();
+    term_resize();
     term_clear();
     term_set_cursor(false);
     write_buffer.buffer_len = 0;
 
     atexit(&term_uninit);
-    signal(SIGWINCH, &_term_resize_signal_handler);
 }
 
 void term_draw_symbol(int x, int y, struct Colour* fg, struct Colour* bg, TextAttributeFlags ta_flags, char symbol)

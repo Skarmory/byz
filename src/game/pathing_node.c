@@ -4,7 +4,7 @@
 
 #include <stddef.h>
 
-void pathing_data_init(struct PATHING_DATA* pathing_data)
+void pathing_data_init(struct PathingData* pathing_data)
 {
     pathing_data->from            = NULL;
     pathing_data->to              = NULL;
@@ -15,7 +15,7 @@ void pathing_data_init(struct PATHING_DATA* pathing_data)
     pathing_data->generation_id   = -1;
 }
 
-void connectivity_node_init(struct CONNECTIVITY_NODE* node, int x, int y, float weight, PathingFlags pathing_flags)
+void connectivity_node_init(struct ConnectivityNode* node, int x, int y, float weight, PathingFlags pathing_flags)
 {
     node->x = x;
     node->y = y;
@@ -25,12 +25,12 @@ void connectivity_node_init(struct CONNECTIVITY_NODE* node, int x, int y, float 
     node->connections = list_new();
 }
 
-void connectivity_node_add_connection(struct CONNECTIVITY_NODE* node, struct CONNECTIVITY_NODE* connection)
+void connectivity_node_add_connection(struct ConnectivityNode* node, struct ConnectivityNode* connection)
 {
     list_add(node->connections, connection);
 }
 
-void connectivity_node_remove_connection(struct CONNECTIVITY_NODE* node, struct CONNECTIVITY_NODE* connection)
+void connectivity_node_remove_connection(struct ConnectivityNode* node, struct ConnectivityNode* connection)
 {
     list_rm(node->connections, list_find(node->connections, connection));
 }

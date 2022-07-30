@@ -1,5 +1,6 @@
 #include "core/string.h"
 
+#include <stdarg.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -66,4 +67,25 @@ int string_rfindi(struct string* str, const char needle, size_t start)
     while(curr >= haystack);
 
     return -1;
+}
+
+void string_format(struct string* str, const char* format, ...)
+{
+    va_list args;
+    va_list args_copy;
+    va_copy(args_copy, args);
+
+    va_start(args_copy, format);
+    int buffer_size = vsnprintf(NULL, 0, format, args_copy);
+    va_end(args_copy);
+
+    if(buffer_size > str->size)
+    {
+        str->buffer = realloc(str->buffer, buffer_size + 1);
+        str->size = buffer_size;
+    }
+
+    va_start(args, format);
+    vsnprintf(str->buffer, buffer_size, format, args);
+    va_end(args);
 }

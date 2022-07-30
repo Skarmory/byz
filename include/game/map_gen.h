@@ -1,9 +1,10 @@
-#ifndef BYZ_MAPGEN_H
-#define BYZ_MAPGEN_H
+#ifndef BYZ_GAME_MAP_GEN_H
+#define BYZ_GAME_MAP_GEN_H
 
 struct Map;
+struct MapCell;
 
-/* Create a map */
+void gen_map_cell(struct Map* map, struct MapCell* cell);
 void gen_map(struct Map* map);
 
 #endif

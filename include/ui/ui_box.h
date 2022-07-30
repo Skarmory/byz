@@ -12,6 +12,7 @@ struct UIBox
 };
 
 struct UIBox* ui_box_new(int x, int y, int w, int h);
+void          ui_box_init(struct UIBox* ui_box, int x, int y, int w, int h);
 void          ui_box_free(struct UIBox* ui_box);
 
 void          ui_box_draw(struct UIBox* box, bool invalidate_inner_area);

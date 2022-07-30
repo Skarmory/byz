@@ -2,13 +2,16 @@
 #define BYZ_MAP_CELL_H
 
 #include "core/list.h"
+#include "core/symbol.h"
 #include "game/map_location.h"
 #include "game/mon_attr.h"
 
 #include <stdbool.h>
 
-#define g_map_cell_width  100
-#define g_map_cell_height 100
+#include "game/terrain.h"
+
+#define g_map_cell_width  256
+#define g_map_cell_height 256
 
 struct Mon;
 
@@ -18,13 +21,18 @@ struct MapCell
     int cell_y;
     int world_x;
     int world_y;
-    struct MapLocation locs[g_map_cell_width * g_map_cell_height];
-    struct List room_list;
+    int seed;
+    struct MapLocation* locs;
     struct List mon_list;
+
+    struct Terrain terrain;
+    struct Symbol symbol;
 };
 
-struct MapCell* map_cell_new(int cell_x, int cell_y);
+struct MapCell* map_cell_new(int cell_x, int cell_y, int seed);
 void map_cell_free(struct MapCell* cell);
+void map_cell_init(struct MapCell* cell);
+void map_cell_uninit(struct MapCell* cell);
 
 /**
  * Return a map location based on world coordinates
