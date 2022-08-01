@@ -102,8 +102,13 @@ void log_scheck_fail(const char* msg)
  */
 void uninit_logs(void)
 {
+    fflush(s_log_channels[LOG_ID_MSGHIST].file);
     fclose(s_log_channels[LOG_ID_MSGHIST].file);
+
+    fflush(s_log_channels[LOG_ID_DEBUG].file);
     fclose(s_log_channels[LOG_ID_DEBUG].file);
+
+    fflush(s_log_channels[LOG_ID_TEST].file);
     fclose(s_log_channels[LOG_ID_TEST].file);
 }
 
