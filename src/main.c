@@ -235,6 +235,7 @@ int run(void)
 
     embark_screen_free(anon.embark_screen);
     map_free(g_cmap);
+    free(g_camera);
 
     uninit_main();
 
@@ -380,6 +381,7 @@ int main(int argc, char** argv)
     //test_list_insert_before();
     //test_perlin();
     //test_rng();
+
     run();
 
     return 0;
