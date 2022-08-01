@@ -334,11 +334,7 @@ static void _parser_free_parse_formats(struct Parser* parser)
 
 static void _parser_free_userdata(struct Parser* parser)
 {
-    struct ListNode* node = NULL, *next = NULL;
-    list_for_each_safe(&parser->userdata, node, next)
-    {
-        free(node);
-    }
+    list_uninit(&parser->userdata);
 }
 
 // Find a format with a name that corresponds to the current entry name
