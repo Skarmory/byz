@@ -1,5 +1,6 @@
 #include "core/rng.h"
 
+#include <limits.h>
 #include <stdlib.h>
 
 #define C_N 624
@@ -30,7 +31,7 @@ static void _twist(struct RNG* rng)
 {
     for(int i = 0; i < C_N; ++i)
     {
-        int x = (rng->mt[i] & upper_mask) + (rng->mt[i+1 % C_N] & lower_mask);
+        int x = (rng->mt[i] & upper_mask) + (rng->mt[(i+1) % C_N] & lower_mask);
         int xA = x >> 1;
 
         if((x % 2) != 0)
@@ -81,4 +82,9 @@ int rng_get(struct RNG* rng)
     ++rng->index;
 
     return lower_mask & value;
+}
+
+float rng_get_float(struct RNG* rng)
+{
+    return (float)rng_get(rng) / (float)INT_MAX;
 }
