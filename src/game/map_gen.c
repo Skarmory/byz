@@ -1,8 +1,10 @@
 #include "game/map_gen.h"
 
 #include "core/colour.h"
+#include "core/geom.h"
 #include "core/log.h"
 #include "core/noise.h"
+#include "core/poisson_disk.h"
 #include "core/rng.h"
 #include "core/symbol.h"
 #include "core/tasking.h"
@@ -353,6 +355,20 @@ void _gen_map_cell_locs(struct MapCell* cell, struct MapGenArgs* map_gen_args)
         loc->symbol.fg = *COL(CLR_DEFAULT);
         loc->symbol.sym = ' ';
     }
+
+    struct List* vegetation_points = poisson_disk(g_map_cell_width, g_map_cell_height, rng);
+    struct ListNode *n = NULL, *nn = NULL;
+    list_for_each_safe(vegetation_points, n, nn)
+    {
+        struct Point* p = n->data;
+        struct MapLocation* loc = map_cell_get_location_relative(cell, p->x, p->y);
+
+        loc->symbol.sym = '#';
+        loc->symbol.fg = *COL(CLR_DGREEN);
+
+        free(p);
+    }
+    list_free(vegetation_points);
 
     rng_free(rng);
 }
