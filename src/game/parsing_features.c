@@ -56,7 +56,7 @@ parsing_callback(_parse_features_finalise)
     int idx = 0;
     list_for_each(features_data, node)
     {
-        memcpy(&g_features[idx++], node->data, sizeof(struct Feature));
+        g_features[idx++] = *(struct Feature*)node->data;
         free(node->data);
     }
 
@@ -90,8 +90,7 @@ parsing_callback(_parse_feature_desc_callback)
 parsing_callback(_parse_feature_symbol_callback)
 {
     struct Feature* feature = parser_get_userdata_active(parser);
-    feature->symbol = malloc(sizeof(struct Symbol));
-    memset(feature->symbol, 0, sizeof(struct Symbol));
+    feature->symbol = calloc(1, sizeof(struct Symbol));
 
     feature->symbol->sym = parser_field_get_char(parser, "symbol", "symbol");
     return PARSE_CALLBACK_OK;
