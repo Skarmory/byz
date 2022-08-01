@@ -70,6 +70,8 @@ void map_cell_free(struct MapCell* cell)
 
             free(cell->locs[idx].pathing);
         }
+
+        map_cell_uninit(cell);
     }
 
     free(cell);
@@ -77,7 +79,7 @@ void map_cell_free(struct MapCell* cell)
 
 void map_cell_init(struct MapCell* cell)
 {
-    cell->locs = malloc(g_map_cell_width * g_map_cell_height * sizeof(struct MapLocation));
+    cell->locs = calloc(g_map_cell_width * g_map_cell_height, sizeof(struct MapLocation));
 }
 
 void map_cell_uninit(struct MapCell* cell)
