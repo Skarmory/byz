@@ -5,15 +5,23 @@
 
 #include <stdbool.h>
 
-struct Coordinate
+struct Point
 {
     int x;
     int y;
 };
 
+struct Rect
+{
+    int x;
+    int y;
+    int w;
+    int h;
+};
+
 struct Line
 {
-    struct List coordinate_list;
+    struct List point_list;
 };
 
 /* 
@@ -33,8 +41,11 @@ bool geom_point_in_circle(int px, int py, int cx, int cy, int r);
  * Check whether (px, py) is inside rectangle with top left corner at (rx, ry) with width w and height h
  */
 bool geom_point_in_rect(int px, int py, int rx, int ry, int w, int h);
+bool geom_point_in_rect2(struct Point* p, struct Rect* r);
 
 bool geom_rect_in_rect(int rx0, int ry0, int rw0, int rh0, int rx1, int ry1, int rw1, int rh1);
+
+float geom_distance2_point_point(struct Point* p1, struct Point* p2);
 
 void geom_dbg_log_line(struct Line* line, const char* line_name);
 

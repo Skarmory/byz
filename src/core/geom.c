@@ -76,21 +76,21 @@ void geom_gen_line(struct Line* out_line, int x0, int y0, int x1, int y1)
     int ny = y0;
     float err = 0.0f;
 
-    list_init(&out_line->coordinate_list);
+    list_init(&out_line->point_list);
 
-    struct Coordinate* coord = malloc(sizeof(struct Coordinate));
-    coord->x = x0;
-    coord->y = y0;
+    struct Point* p = malloc(sizeof(struct Point));
+    p->x = x0;
+    p->y = y0;
 
-    list_add(&out_line->coordinate_list, coord);
+    list_add(&out_line->point_list, p);
 
     // Set the in-between line segments
     while(geom_gen_line_increment(x0, y0, x1, y1, &nx, &ny, &err))
     {
-        coord = malloc(sizeof(struct Coordinate));
-        coord->x = nx;
-        coord->y = ny;
-        list_add(&out_line->coordinate_list, coord);
+        p = malloc(sizeof(struct Point));
+        p->x = nx;
+        p->y = ny;
+        list_add(&out_line->point_list, p);
     }
 }
 
@@ -104,7 +104,12 @@ bool geom_point_in_circle(int px, int py, int cx, int cy, int r)
 
 bool geom_point_in_rect(int px, int py, int rx, int ry, int w, int h)
 {
-    return (px >= rx && px <= (rx + w) && py >= ry && py <= (ry + h));
+    return (px >= rx && px < (rx + w) && py >= ry && py < (ry + h));
+}
+
+bool geom_point_in_rect2(struct Point* p, struct Rect* r)
+{
+    return geom_point_in_rect(p->x, p->y, r->x, r->y, r->w, r->h);
 }
 
 bool geom_rect_in_rect(int rx0, int ry0, int rw0, int rh0, int rx1, int ry1, int rw1, int rh1)
@@ -120,10 +125,18 @@ void geom_dbg_log_line(struct Line* line, const char* line_name)
     log_format_msg(LOG_DEBUG, "Debugging line: %s", line_name);
     int seg = 0;
     struct ListNode* n = NULL;
-    list_for_each(&line->coordinate_list, n)
+    list_for_each(&line->point_list, n)
     {
-        struct Coordinate* cptr = n->data;
+        struct Point* cptr = n->data;
         log_format_msg(LOG_DEBUG, "\tsegment %d: (%d, %d)", seg, cptr->x, cptr->y);
         ++seg;
     }
+}
+
+float geom_distance2_point_point(struct Point* p1, struct Point* p2)
+{
+    float xspan = p1->x - p2->x;
+    float yspan = p1->y - p2->y;
+
+    return xspan * xspan + yspan * yspan;
 }
