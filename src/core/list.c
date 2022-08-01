@@ -196,6 +196,20 @@ void* list_pop_head(struct List* list)
     return data;
 }
 
+void* list_pop_at(struct List* list, int index)
+{
+    struct ListNode* node = list->head;
+    while(index != 0)
+    {
+        node = node->next;
+        --index;
+    }
+
+    void* data = node->data;
+    list_rm(list, node);
+    return data;
+}
+
 void* list_peek_head(const struct List* list)
 {
     if(list->head)

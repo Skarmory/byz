@@ -31,6 +31,7 @@ void             list_splice_node(struct List* list_from, struct List* list_to, 
 void             list_insert_after(struct List* list, void* insert_this, struct ListNode* after_this);
 void             list_insert_before(struct List* list, void* insert_this, struct ListNode* before_this);
 void*            list_pop_head(struct List* list);
+void*            list_pop_at(struct List* list, int index);
 void*            list_peek_head(const struct List* list);
 void*            list_peek_tail(const struct List* list);
 bool             list_empty(const struct List* list);
