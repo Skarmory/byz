@@ -180,12 +180,6 @@ static void handle_draw()
 
 int run(void)
 {
-    if(!init_main())
-    {
-        printf("Initialisation failed. Check debug log.\n");
-        return -1;
-    }
-
     g_camera = (struct camera*)malloc(sizeof(struct camera));
     g_camera->x = 0;
     g_camera->y = 0;
