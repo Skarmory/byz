@@ -365,9 +365,9 @@ void _gen_map_cell_locs(struct MapCell* cell, struct MapGenArgs* map_gen_args)
 
         loc->symbol.sym = '#';
         loc->symbol.fg = *COL(CLR_DGREEN);
-
-        free(p);
     }
+
+    list_free_data(vegetation_points, NULL);
     list_free(vegetation_points);
 
     rng_free(rng);

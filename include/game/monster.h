@@ -25,6 +25,7 @@ struct Mon
 
 struct Mon* mon_new(struct MonType* type, int x, int y);
 void mon_free(struct Mon*);
+void mon_free_wrapper(void* mon);
 bool mon_has_move_attr(struct Mon* mon, MonAttrMoveFlags move_flags);
 bool mon_is_dead(struct Mon* mon);
 bool mon_dual_wielding(struct Mon* mon);

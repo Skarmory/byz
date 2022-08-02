@@ -46,6 +46,11 @@ void mon_free(struct Mon* mon)
     free(mon);
 }
 
+void mon_free_wrapper(void* mon)
+{
+    mon_free((struct Mon*)mon);
+}
+
 /**
  * Return true if monster has ability to use a particular pathing type
  */

@@ -39,6 +39,7 @@ struct Object
  * Calls the correct free function depending on object type
  */
 void free_obj(struct Object* obj);
+void free_obj_wrapper(void* obj);
 bool obj_is_equipment(struct Object* obj);
 
 #endif

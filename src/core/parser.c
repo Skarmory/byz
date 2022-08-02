@@ -77,10 +77,9 @@ struct Parser
 /* ----- FDECL ----- */
 
 static inline struct FieldData* _field_data_new(struct Metadata* meta);
-static inline void _field_data_free(struct FieldData* field);
+static inline void _field_data_free(void* field);
 static inline struct Metadata* _metadata_new(void);
-static inline void _metadata_free(struct Metadata* meta);
-static void _parse_format_free(struct ParseFormat* format);
+static void _parse_format_free(void* format);
 static enum DataType _to_data_type(char* str);
 static enum ParserCode _split_key_value(char* field_name, char* field_data, char* line);
 static enum ParserCode _parse_field_data(struct ParseData* parse_data, struct ParseFormat* parse_format, char* field_data);
@@ -165,14 +164,15 @@ static inline struct FieldData* _field_data_new(struct Metadata* meta)
     return data;
 }
 
-static inline void _field_data_free(struct FieldData* field)
+static inline void _field_data_free(void* field)
 {
-    if(field->meta->type == TYPE_STRING)
+    struct FieldData* cfield = field;
+    if(cfield->meta->type == TYPE_STRING)
     {
-        free(field->value.as_str);
+        free(cfield->value.as_str);
     }
 
-    free(field);
+    free(cfield);
 }
 
 static inline struct Metadata* _metadata_new(void)
@@ -181,21 +181,11 @@ static inline struct Metadata* _metadata_new(void)
     return meta;
 }
 
-static inline void _metadata_free(struct Metadata* meta)
+static void _parse_format_free(void* format)
 {
-    free(meta);
-}
-
-static void _parse_format_free(struct ParseFormat* format)
-{
-    struct ListNode *metadata_node = NULL, *metadata_node_next = NULL;
-    list_for_each_safe(&format->field_meta, metadata_node, metadata_node_next)
-    {
-        _metadata_free(metadata_node->data);
-        free(metadata_node);
-    }
-
-    free(format);
+    struct ParseFormat* cformat = format;
+    list_free_data(&cformat->field_meta, NULL);
+    free(cformat);
 }
 
 static enum DataType _to_data_type(char* str)
@@ -313,23 +303,13 @@ static inline void _parser_reset(struct Parser* parser)
 {
     if(parser->parse_data.data.count > 0)
     {
-        struct ListNode *field_node = NULL, *field_node_next = NULL;
-        list_for_each_safe(&parser->parse_data.data, field_node, field_node_next)
-        {
-            _field_data_free(field_node->data);
-            list_rm(&parser->parse_data.data, field_node);
-        }
+        list_free_data(&parser->parse_data.data, &_field_data_free);
     }
 }
 
 static void _parser_free_parse_formats(struct Parser* parser)
 {
-    struct ListNode* node = NULL, *next = NULL;
-    list_for_each_safe(&parser->parse_formats, node, next)
-    {
-        _parse_format_free(node->data);
-        free(node);
-    }
+    list_free_data(&parser->parse_formats, &_parse_format_free);
 }
 
 static void _parser_free_userdata(struct Parser* parser)
@@ -518,12 +498,7 @@ enum ParserCode parser_parse(struct Parser* parser, char* line)
 
     if((code = _parse_field_data(&parser->parse_data, format, field_data)) != PARSER_OK)
     {
-        struct ListNode* n = NULL, *nn = NULL;
-        list_for_each_safe(&parser->parse_data.data, n, nn)
-        {
-            _field_data_free(n->data);
-        }
-
+        list_free_data(&parser->parse_data.data, &_field_data_free);
         return code;
     }
 

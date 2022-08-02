@@ -31,6 +31,7 @@ struct MapCell
 
 struct MapCell* map_cell_new(int cell_x, int cell_y, int seed);
 void map_cell_free(struct MapCell* cell);
+void map_cell_free_wrapper(void* cell);
 void map_cell_init(struct MapCell* cell);
 void map_cell_uninit(struct MapCell* cell);
 

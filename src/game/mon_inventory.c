@@ -26,13 +26,7 @@ struct Inventory* new_inventory(void)
 
 void free_inventory(struct Inventory* inventory)
 {
-    struct ListNode *node, *n;
-    list_for_each_safe(&inventory->obj_list, node, n)
-    {
-        free_obj(node->data);
-        free(node);
-    }
-
+    list_free_data(&inventory->obj_list, &free_obj_wrapper);
     free(inventory);
 }
 

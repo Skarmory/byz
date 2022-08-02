@@ -41,13 +41,7 @@ struct Map* map_new(int width, int height, int seed)
  */
 void map_free(struct Map* map)
 {
-    struct ListNode *node = NULL, *next = NULL;
-    list_for_each_safe(&map->cell_list, node, next)
-    {
-        map_cell_free(node->data);
-        free(node);
-    }
-
+    list_free_data(&map->cell_list, &map_cell_free_wrapper);
     free(map);
 }
 

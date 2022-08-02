@@ -52,22 +52,13 @@ void map_cell_free(struct MapCell* cell)
     struct ListNode *node = NULL, *n = NULL;
 
     // Free mons
-    list_for_each_safe(&cell->mon_list, node, n)
-    {
-        mon_free(node->data);
-        free(node);
-    }
+    list_free_data(&cell->mon_list, &mon_free_wrapper);
 
     if(cell->locs)
     {
         for(int idx = 0; idx < (g_map_cell_width * g_map_cell_height); ++idx)
         {
-            list_for_each_safe(&cell->locs[idx].obj_list, node, n)
-            {
-                free_obj(node->data);
-                free(node);
-            }
-
+            list_free_data(&cell->locs[idx].obj_list, &free_obj_wrapper);
             free(cell->locs[idx].pathing);
         }
 
@@ -75,6 +66,11 @@ void map_cell_free(struct MapCell* cell)
     }
 
     free(cell);
+}
+
+void map_cell_free_wrapper(void* cell)
+{
+    map_cell_free((struct MapCell*)cell);
 }
 
 void map_cell_init(struct MapCell* cell)
