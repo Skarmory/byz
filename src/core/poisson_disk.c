@@ -41,7 +41,7 @@ static bool _point_collides(struct Point* p, struct PoissonDiskGrid* grid, float
 
         if(geom_point_in_rect2(&tmp, &grid->dimensions) && 
            geom_distance2_point_point(p, &tmp) < irad2 &&
-           grid->occupancy[tmp.x + (tmp.y * grid->dimensions.h)] == true)
+           grid->occupancy[tmp.x + (tmp.y * grid->dimensions.w)] == true)
         {
             return true;
         }
@@ -62,7 +62,7 @@ static void _set_occupancy_around(struct Point* p, struct PoissonDiskGrid* grid,
         if(geom_point_in_rect2(&tmp, &grid->dimensions) && 
            geom_distance2_point_point(p, &tmp) < irad2)
         {
-            grid->occupancy[tmp.x + (tmp.y * grid->dimensions.h)] = true;
+            grid->occupancy[tmp.x + (tmp.y * grid->dimensions.w)] = true;
         }
     }
 }
@@ -76,7 +76,7 @@ static void _dbg_print_occupancy(struct PoissonDiskGrid* grid)
     {
         for(int x = 0; x < grid->dimensions.w; ++x)
         {
-            if(grid->occupancy[x + y * grid->dimensions.h] == true)
+            if(grid->occupancy[x + y * grid->dimensions.w] == true)
             {
                 buf[x] = 'X';
             }
