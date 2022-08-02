@@ -59,6 +59,26 @@ void list_free(struct List* list)
     free(list);
 }
 
+void list_free_data(struct List* list, dtor_func dtor)
+{
+    struct ListNode *n = NULL, *nn = NULL;
+    list_for_each_safe(list, n, nn)
+    {
+        if(dtor)
+        {
+            dtor(n->data);
+        }
+        else
+        {
+            free(n->data);
+        }
+
+        free(n);
+    }
+
+    list_init(list);
+}
+
 void list_init(struct List* list)
 {
     list->count = 0;

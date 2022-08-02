@@ -4,6 +4,7 @@
 #include <stdbool.h>
 
 typedef bool(*sort_func)(void* lhs, void* rhs);
+typedef void(*dtor_func)(void* obj);
 
 struct ListNode
 {
@@ -21,6 +22,7 @@ struct List
 
 struct List*     list_new(void);
 void             list_free(struct List* list);
+void             list_free_data(struct List* list, dtor_func dtor);
 void             list_init(struct List* list);
 void             list_uninit(struct List* list);
 void             list_add(struct List* list, void* data);
