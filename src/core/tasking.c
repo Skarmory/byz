@@ -14,17 +14,19 @@
 
 struct Tasker* g_tasker = NULL;
 
-struct Thread;
-static void _thread_init(struct Thread* thread, struct Tasker* tasker);
-static void _thread_free(struct Thread* thread);
-static void _thread_start_task(struct Thread* thread);
-static void _thread_execute_task(struct Thread* thread);
-static void _thread_end_task(struct Thread* thread);
-static void _thread_free_task(struct Thread* thread);
-static void _thread_stop(struct Thread* thread);
-static int  _thread_update(struct Thread* thread);
+struct _Thread;
+static void _thread_init(struct _Thread* thread, struct Tasker* tasker);
+static void _thread_free(struct _Thread* thread);
+static void _thread_start_task(struct _Thread* thread);
+static void _thread_execute_task(struct _Thread* thread);
+static void _thread_end_task(struct _Thread* thread);
+static void _thread_free_task(struct _Thread* thread);
+static void _thread_stop(struct _Thread* thread);
+static int  _thread_update(struct _Thread* thread);
 
-enum ThreadState
+static void _task_free_wrapper(void* task);
+
+static enum _ThreadState
 {
     THREAD_STATE_EXECUTING,
     THREAD_STATE_IDLE,
@@ -32,7 +34,7 @@ enum ThreadState
     THREAD_STATE_STOPPED
 };
 
-struct Thread
+static struct _Thread
 {
     struct Tasker* tasker;
     thrd_t         thread;
@@ -43,18 +45,18 @@ struct Thread
 
 struct Tasker
 {
-    atomic_int    pending_task_count;
-    atomic_int    executing_task_count;
-    atomic_int    completed_task_count;
-    atomic_bool   kill;
+    atomic_int     pending_task_count;
+    atomic_int     executing_task_count;
+    atomic_int     completed_task_count;
+    atomic_bool    kill;
 
-    struct Thread worker_threads[MAX_THREADS];
-    mtx_t         pending_list_lock;
-    mtx_t         complete_list_lock;
-    cnd_t         work_signal;
+    struct _Thread worker_threads[MAX_THREADS];
+    mtx_t          pending_list_lock;
+    mtx_t          complete_list_lock;
+    cnd_t          work_signal;
 
-    struct List   pending_list;
-    struct List   complete_list;
+    struct List    pending_list;
+    struct List    complete_list;
 };
 
 struct Task
@@ -66,10 +68,12 @@ struct Task
     char               name[256];
 };
 
+// LOCAL FUNCS
+
 /**
  * Set initial state for a worker thread.
  */
-static void _thread_init(struct Thread* thread, struct Tasker* tasker)
+static void _thread_init(struct _Thread* thread, struct Tasker* tasker)
 {
     thread->tasker = tasker;
     thread->state = THREAD_STATE_IDLE;
@@ -80,7 +84,7 @@ static void _thread_init(struct Thread* thread, struct Tasker* tasker)
 /**
  * Stop a worker thread and join.
  */
-static void _thread_free(struct Thread* thread)
+static void _thread_free(struct _Thread* thread)
 {
     _thread_stop(thread);
 
@@ -92,7 +96,7 @@ static void _thread_free(struct Thread* thread)
  * Thread should have locked the pending list mutex at this point.
  * Pop task from list and set thread state
  */
-static void _thread_start_task(struct Thread* thread)
+static void _thread_start_task(struct _Thread* thread)
 {
     thread->task = list_pop_head(&thread->tasker->pending_list);
     thread->state = THREAD_STATE_EXECUTING;
@@ -103,7 +107,7 @@ static void _thread_start_task(struct Thread* thread)
  * SHOULD ONLY BE CALLED BY A WORKER THREAD
  * Loops executing the given task until task returns a non-executing state.
  */
-static void _thread_execute_task(struct Thread* thread)
+static void _thread_execute_task(struct _Thread* thread)
 {
     //log_format_msg(LOG_DEBUG, "Worker thread %d executing task: %s", thread->id, thread->task->name);
 
@@ -120,7 +124,7 @@ static void _thread_execute_task(struct Thread* thread)
  * SHOULD ONLY BE CALLED BY A WORKED THREAD
  * Free the task and set thread task to NULL
  */
-static void _thread_free_task(struct Thread* thread)
+static void _thread_free_task(struct _Thread* thread)
 {
     task_free(thread->task);
     thread->task = NULL;
@@ -130,7 +134,7 @@ static void _thread_free_task(struct Thread* thread)
  * SHOULD ONLY BE CALLED BY A WORKER THREAD
  * Add a completed task to the tasker's completed task list.
  */
-static void _thread_end_task(struct Thread* thread)
+static void _thread_end_task(struct _Thread* thread)
 {
     //log_format_msg(LOG_DEBUG, "Worker thread %d ending task: %s", thread->id, thread->task->name);
 
@@ -149,7 +153,7 @@ static void _thread_end_task(struct Thread* thread)
  * SHOULD ONLY BE CALLED BY THE TASKER
  * Signal a thread to stop.
  */
-static void _thread_stop(struct Thread* thread)
+static void _thread_stop(struct _Thread* thread)
 {
     while(thread->state != THREAD_STATE_STOPPED)
     {
@@ -163,7 +167,7 @@ static void _thread_stop(struct Thread* thread)
  * If no tasks, wait on signal from the tasker that new tasks are added.
  * Atomic compare on state swaps in case the tasker stops the thread.
  */
-static int _thread_update(struct Thread* thread)
+static int _thread_update(struct _Thread* thread)
 {
     while(!thread->tasker->kill)
     {
@@ -201,6 +205,13 @@ thread_update_exit_label:
     //log_format_msg(LOG_DEBUG, "Thread %d exited", thread->id);
     thrd_exit(0);
 }
+
+static void _task_free_wrapper(void* task)
+{
+    task_free((struct Task*)task);
+}
+
+// GLOBAL FUNCS
 
 /**
  * Create a new tasker and set the initial state.
@@ -246,18 +257,8 @@ void tasker_free(struct Tasker* tasker)
     mtx_destroy(&tasker->complete_list_lock);
     cnd_destroy(&tasker->work_signal);
 
-    struct ListNode *node, *next;
-    list_for_each_safe(&tasker->pending_list, node, next)
-    {
-        task_free(node->data);
-        free(node);
-    }
-
-    list_for_each_safe(&tasker->complete_list, node, next)
-    {
-        task_free(node->data);
-        free(node);
-    }
+    list_free_data(&tasker->pending_list, &_task_free_wrapper);
+    list_free_data(&tasker->complete_list, &_task_free_wrapper);
 
     free(tasker);
 }
