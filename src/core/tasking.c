@@ -17,8 +17,10 @@ struct Tasker* g_tasker = NULL;
 struct Thread;
 static void _thread_init(struct Thread* thread, struct Tasker* tasker);
 static void _thread_free(struct Thread* thread);
+static void _thread_start_task(struct Thread* thread);
 static void _thread_execute_task(struct Thread* thread);
 static void _thread_end_task(struct Thread* thread);
+static void _thread_free_task(struct Thread* thread);
 static void _thread_stop(struct Thread* thread);
 static int  _thread_update(struct Thread* thread);
 
@@ -44,6 +46,7 @@ struct Tasker
     atomic_int    pending_task_count;
     atomic_int    executing_task_count;
     atomic_int    completed_task_count;
+    atomic_bool   kill;
 
     struct Thread worker_threads[MAX_THREADS];
     mtx_t         pending_list_lock;
@@ -86,6 +89,18 @@ static void _thread_free(struct Thread* thread)
 
 /**
  * SHOULD ONLY BE CALLED BY A WORKER THREAD
+ * Thread should have locked the pending list mutex at this point.
+ * Pop task from list and set thread state
+ */
+static void _thread_start_task(struct Thread* thread)
+{
+    thread->task = list_pop_head(&thread->tasker->pending_list);
+    thread->state = THREAD_STATE_EXECUTING;
+    --thread->tasker->pending_task_count;
+}
+
+/**
+ * SHOULD ONLY BE CALLED BY A WORKER THREAD
  * Loops executing the given task until task returns a non-executing state.
  */
 static void _thread_execute_task(struct Thread* thread)
@@ -102,6 +117,16 @@ static void _thread_execute_task(struct Thread* thread)
 }
 
 /**
+ * SHOULD ONLY BE CALLED BY A WORKED THREAD
+ * Free the task and set thread task to NULL
+ */
+static void _thread_free_task(struct Thread* thread)
+{
+    task_free(thread->task);
+    thread->task = NULL;
+}
+
+/**
  * SHOULD ONLY BE CALLED BY A WORKER THREAD
  * Add a completed task to the tasker's completed task list.
  */
@@ -114,8 +139,10 @@ static void _thread_end_task(struct Thread* thread)
         thread->task->cb_func(thread->task->args);
     }
 
-    task_free(thread->task);
-    thread->task = NULL;
+    _thread_free_task(thread);
+    --thread->tasker->executing_task_count;
+
+    thread->state = THREAD_STATE_IDLE;
 }
 
 /**
@@ -124,10 +151,8 @@ static void _thread_end_task(struct Thread* thread)
  */
 static void _thread_stop(struct Thread* thread)
 {
-    enum ThreadState expect = THREAD_STATE_STOPPED;
-    while(!atomic_compare_exchange_weak(&thread->state, &expect, THREAD_STATE_STOPPED))
+    while(thread->state != THREAD_STATE_STOPPED)
     {
-        expect = THREAD_STATE_STOPPED;
         cnd_signal(&thread->tasker->work_signal);
     }
 }
@@ -140,8 +165,7 @@ static void _thread_stop(struct Thread* thread)
  */
 static int _thread_update(struct Thread* thread)
 {
-    enum ThreadState expect = thread->state;
-    while(atomic_compare_exchange_weak(&thread->state, &expect, THREAD_STATE_IDLE))
+    while(!thread->tasker->kill)
     {
         mtx_lock(&thread->tasker->pending_list_lock);
 
@@ -150,41 +174,26 @@ static int _thread_update(struct Thread* thread)
             // No pending tasks, wait for work signal
             cnd_wait(&thread->tasker->work_signal, &thread->tasker->pending_list_lock);
 
-            // Check that we're still in the idle state
-            // If not, we must be in the stopped state, so break out
-            expect = THREAD_STATE_IDLE;
-            if(!atomic_compare_exchange_strong(&thread->state, &expect, THREAD_STATE_IDLE))
+            if(thread->tasker->kill)
             {
                 mtx_unlock(&thread->tasker->pending_list_lock);
                 goto thread_update_exit_label;
             }
         }
 
-        thread->task = list_pop_head(&thread->tasker->pending_list);
-        --thread->tasker->pending_task_count;
+        _thread_start_task(thread);
 
         mtx_unlock(&thread->tasker->pending_list_lock);
 
         // Check still idle, if so set executing, else stopped so break
-        expect = THREAD_STATE_IDLE;
-        if(!atomic_compare_exchange_strong(&thread->state, &expect, THREAD_STATE_EXECUTING))
+        if(thread->tasker->kill)
         {
+            _thread_free_task(thread);
             goto thread_update_exit_label;
         }
 
         _thread_execute_task(thread);
         _thread_end_task(thread);
-
-        // Check still executing, if so set idle, else stopped to break
-        expect = THREAD_STATE_EXECUTING;
-        if(!atomic_compare_exchange_strong(&thread->state, &expect, THREAD_STATE_IDLE))
-        {
-            goto thread_update_exit_label;
-        }
-
-        --thread->tasker->executing_task_count;
-
-        expect = THREAD_STATE_IDLE;
     }
 
 thread_update_exit_label:
@@ -203,6 +212,7 @@ struct Tasker* tasker_new(void)
     tasker->pending_task_count = 0;
     tasker->executing_task_count = 0;
     tasker->completed_task_count = 0;
+    tasker->kill = false;
     list_init(&tasker->pending_list);
     list_init(&tasker->complete_list);
 
@@ -225,10 +235,7 @@ struct Tasker* tasker_new(void)
  */
 void tasker_free(struct Tasker* tasker)
 {
-    for(int tidx = 0; tidx < MAX_THREADS; ++tidx)
-    {
-        tasker->worker_threads[tidx].state = THREAD_STATE_STOPPING;
-    }
+    tasker->kill = true;
 
     for(int tidx = 0; tidx < MAX_THREADS; ++tidx)
     {
