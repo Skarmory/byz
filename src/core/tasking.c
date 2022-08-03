@@ -26,7 +26,7 @@ static int  _thread_update(struct _Thread* thread);
 
 static void _task_free_wrapper(void* task);
 
-static enum _ThreadState
+enum _ThreadState
 {
     THREAD_STATE_EXECUTING,
     THREAD_STATE_IDLE,
@@ -34,7 +34,7 @@ static enum _ThreadState
     THREAD_STATE_STOPPED
 };
 
-static struct _Thread
+struct _Thread
 {
     struct Tasker* tasker;
     thrd_t         thread;

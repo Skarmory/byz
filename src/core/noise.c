@@ -17,10 +17,10 @@ static void _random_gradient(int x, int y, float* out_x, float* out_y)
     unsigned b = y;
 
     a *= 3284157443;
-    b ^= a << s | a >> w - s;
+    b ^= a << s | a >> (w - s);
 
     b *= 1911520717;
-    a ^= b << s | b >> w - s;
+    a ^= b << s | b >> (w - s);
 
     a *= 2048419325;
 

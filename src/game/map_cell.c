@@ -49,8 +49,6 @@ struct MapCell* map_cell_new(int cell_x, int cell_y, int seed)
 
 void map_cell_free(struct MapCell* cell)
 {
-    struct ListNode *node = NULL, *n = NULL;
-
     // Free mons
     list_free_data(&cell->mon_list, &mon_free_wrapper);
 

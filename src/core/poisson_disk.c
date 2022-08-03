@@ -118,7 +118,6 @@ struct List* poisson_disk(int width, int height, struct RNG* rng)
 
         struct Point* p = list_pop_at(&proc_list, ridx);
 
-        int random_added = 0;
         for(int i = 0; i < new_points_try; ++i)
         {
             struct Point np = _random_point_around(p, min_radius, max_radius, rng);
