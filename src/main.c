@@ -200,7 +200,6 @@ int run(void)
         list_add(&g_cmap->cell_list, map_cell_new(x, y, 0 ));
     }
     gen_map(g_cmap);
-    gen_map_cell(g_cmap, map_get_cell_by_cell_coord(g_cmap, 0, 0));
 
     anon.embark_screen = embark_screen_new(g_cmap);
 
@@ -236,129 +235,6 @@ int run(void)
     return 0;
 }
 
-bool comp(void* lhs, void* rhs)
-{
-    int* l = lhs;
-    int* r = rhs;
-
-    return *l < *r;
-}
-
-void test_list_sort(void)
-{
-    struct List list;
-    list_init(&list);
-
-    int array[11];
-
-    for(int i = 0; i < 11; ++i)
-    {
-        array[i] = rand() % 10;
-        printf("%d ", array[i]);
-
-        list_add(&list, &array[i]);
-    }
-
-    printf("\n");
-
-    list_sort(&list, comp);
-
-    struct ListNode* n = NULL;
-    list_for_each(&list, n)
-    {
-        printf("%d ", *((int*)n->data));
-    }
-
-    printf("\n");
-
-    list_uninit(&list);
-}
-
-void test_list_add_head(void)
-{
-    struct List list;
-    list_init(&list);
-
-    int array[11];
-
-    printf("IN:\n");
-    for(int i = 0; i < 11; ++i)
-    {
-        array[i] = i;
-        printf("%d ", array[i]);
-
-        list_add_head(&list, &array[i]);
-    }
-
-    printf("\n");
-
-    printf("OUT:\n");
-    struct ListNode* n = NULL;
-    list_for_each(&list, n)
-    {
-        printf("%d ", *((int*)n->data));
-    }
-
-    printf("\n");
-
-    list_uninit(&list);
-}
-
-void test_list_insert_before(void)
-{
-    struct List list;
-    list_init(&list);
-
-    int array[5];
-
-    printf("IN:\n");
-    for(int i = 0; i < 5; ++i)
-    {
-        array[i] = i;
-        list_add(&list, &array[i]);
-        printf("%d ", array[i]);
-
-    }
-    printf("\n");
-
-    struct ListNode* insert_before = list_find(&list, &array[0]);
-
-    int data = 77;
-    list_insert_before(&list, &data, insert_before);
-
-    printf("IN:\n");
-    list_for_each(&list, insert_before)
-    {
-        printf("%d ", *((int*)insert_before->data));
-    }
-    printf("\n");
-
-    list_uninit(&list);
-}
-
-//#include "core/noise.h"
-//void test_perlin(void)
-//{
-//    for(float i = 0.0f; i < 10.0f; i += 0.01f)
-//    for(float j = 0.0f; j < 10.0f; j += 0.01f)
-//    {
-//        log_format_msg(LOG_DEBUG, "%f", perlin(i, j));
-//    }
-//}
-
-#include "core/rng.h"
-void test_rng(void)
-{
-    struct RNG* rng = rng_new(7777);
-
-    for(int i = 0; i < 10000; ++i)
-    {
-        log_format_msg(LOG_DEBUG, "%d", rng_get(rng) % 500);
-    }
-
-    rng_free(rng);
-}
-
 int main(int argc, char** argv)
 {
     (void)argc;
@@ -370,59 +246,7 @@ int main(int argc, char** argv)
         return -1;
     }
 
-    //test_list_sort();
-    //test_list_add_head();
-    //test_list_insert_before();
-    //test_perlin();
-    //test_rng();
-
     run();
 
     return 0;
 }
-
-//int main(int argc, char** argv)
-//{
-//    (void)argc;
-//    (void)argv;
-//
-//    if(!init_main())
-//    {
-//        printf("Initialisation failed. Check debug log.");
-//        return -1;
-//    }
-//
-//#ifdef DEBUG
-//    log_msg(LOG_DEBUG, "program initialised with params:");
-//    for(int i = 0; i < argc; ++i)
-//    {
-//        log_format_msg(LOG_DEBUG, "\t%s", argv[i]);
-//    }
-//#endif
-//
-//    // some intro text
-//    term_draw_text((screen_cols/2) - 7, screen_rows/2, NULL, NULL, 0, "Welcome to Yun");
-//    term_refresh();
-//    term_wait_on_input();
-//
-//    new_player();
-//    new_game();
-//
-//    int map_width = 3;
-//    int map_height = 3;
-//    g_cmap = map_new(map_width, map_height);
-//    gen_map(g_cmap, MAPTYPE_DUNGEON);
-//
-//    int map_ui_size_x = 0;
-//    int map_ui_size_y = 0;
-//    int map_ui_size_w = 80;
-//    int map_ui_size_h = 40;
-//    g_ui->ui_map = ui_map_new(map_ui_size_x, map_ui_size_y, map_ui_size_w, map_ui_size_h, g_cmap);
-//
-//    mon_set_stat(g_you->mon, STAT_TYPE_HP_MAX, 999);
-//    mon_set_stat(g_you->mon, STAT_TYPE_HP, 999);
-//
-//    main_loop();
-//
-//    do_quit();
-//}
