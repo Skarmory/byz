@@ -24,6 +24,7 @@ struct MapCell* map_cell_new(int cell_x, int cell_y, int seed)
     cell->world_y = cell_y * g_map_cell_height;
     cell->seed = seed;
     cell->locs = NULL;
+    cell->load_state = MAP_CELL_UNLOADED;
     list_init(&cell->mon_list);
 
     // Connect up connectivity nodes

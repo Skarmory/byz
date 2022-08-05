@@ -15,6 +15,12 @@
 
 struct Mon;
 
+enum MapCellLoadState
+{
+    MAP_CELL_LOADED,
+    MAP_CELL_UNLOADED
+};
+
 struct MapCell
 {
     int cell_x;
@@ -27,6 +33,7 @@ struct MapCell
 
     struct Terrain terrain;
     struct Symbol symbol;
+    enum MapCellLoadState load_state;
 };
 
 struct MapCell* map_cell_new(int cell_x, int cell_y, int seed);
