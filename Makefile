@@ -37,6 +37,7 @@ test: $(GAME_OBJS) $(TEST_OBJS)
 	$(CC) $(CFLAGS) $(GAME_OBJS) $(TEST_OBJS) -o $(GAME_TEST) $(LDFLAGS)
 
 clean:
+	@rm -f $(GAME_MAIN)
 	@rm -f $(GAME_OBJS)
 	@rm -f $(GAME_DEPS)
 	@rm -f $(TEST_OBJS)
