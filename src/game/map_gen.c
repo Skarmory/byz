@@ -37,11 +37,22 @@ struct MapGenArgs
     int precipitation_seed_y;
 };
 
-struct _gen_map_cells_TaskArgs
+struct _gen_map_TaskArgs
 {
     struct Map* map;
-    int x;
     struct MapGenArgs* map_gen_args;
+};
+
+struct _gen_map_cells_TaskArgs
+{
+    struct _gen_map_TaskArgs gen_map_args;
+    int x;
+};
+
+struct _gen_map_cell_TaskArgs
+{
+    struct Map*     map;
+    struct MapCell* cell;
 };
 
 //enum MAP_EDGE
@@ -370,18 +381,20 @@ void _gen_map_cell_locs(struct MapCell* cell, struct MapGenArgs* map_gen_args)
     list_free_data(vegetation_points, NULL);
     list_free(vegetation_points);
 
+    cell->load_state = MAP_CELL_LOADED;
+
     rng_free(rng);
 }
 
 static int _gen_map_cells_task_func(void* args)
 {
     struct _gen_map_cells_TaskArgs* cargs = args;
-    for(int y = 0; y < cargs->map->height; ++y)
+    for(int y = 0; y < cargs->gen_map_args.map->height; ++y)
     {
         log_format_msg(LOG_DEBUG, "Gen map cell %d, %d", cargs->x, y);
 
-        struct MapCell* cell = map_get_cell_by_cell_coord(cargs->map, cargs->x, y);
-        _gen_map_cell_no_locs(cell, cargs->map_gen_args);
+        struct MapCell* cell = map_get_cell_by_cell_coord(cargs->gen_map_args.map, cargs->x, y);
+        _gen_map_cell_no_locs(cell, cargs->gen_map_args.map_gen_args);
     }
 
     return TASK_STATUS_SUCCESS;
@@ -390,7 +403,7 @@ static int _gen_map_cells_task_func(void* args)
 static int _gen_map_cells_task_cbfunc(void* args)
 {
     struct _gen_map_cells_TaskArgs* cargs = args;
-    log_format_msg(LOG_DEBUG, "Gen map cells [%d, (0 - %d)] complete", cargs->x, cargs->map->height - 1);
+    log_format_msg(LOG_DEBUG, "Gen map cells [%d, (0 - %d)] complete", cargs->x, cargs->gen_map_args.map->height - 1);
 
     return TASK_STATUS_SUCCESS;
 }
@@ -398,9 +411,9 @@ static int _gen_map_cells_task_cbfunc(void* args)
 static void _make_gen_map_cells_task(struct Map* map, int x, struct MapGenArgs* args)
 {
     struct _gen_map_cells_TaskArgs targs;
-    targs.map = map;
+    targs.gen_map_args.map = map;
+    targs.gen_map_args.map_gen_args = args;
     targs.x = x;
-    targs.map_gen_args = args;
 
     char task_name[256];
     snprintf(task_name, 256, "Gen Map Cells Task: %d", x);
@@ -422,6 +435,31 @@ void gen_map_cell(struct Map* map, struct MapCell* cell)
     rng_free(rng);
 
     _gen_map_cell_locs(cell, &gen_args);
+}
+
+static int _gen_map_cell_task_func(void* args)
+{
+    struct _gen_map_cell_TaskArgs* cargs = args;
+    gen_map_cell(cargs->map, cargs->cell);
+    return TASK_STATUS_SUCCESS;
+}
+
+struct Task* gen_map_cell_async(struct Map* map, struct MapCell* cell)
+{
+    struct _gen_map_cell_TaskArgs args;
+    args.map = map;
+    args.cell = cell;
+
+    struct Task* task = task_new(
+        "Gen map cell task",
+        &_gen_map_cell_task_func,
+        NULL,
+        &args,
+        sizeof(struct _gen_map_cell_TaskArgs));
+
+    tasker_add_task(g_tasker, task);
+
+    return task;
 }
 
 void gen_map(struct Map* map)
