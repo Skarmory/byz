@@ -40,22 +40,42 @@ test_assert_equal_char_buffer_fail:
 
 bool test_assert_equal_int(const int expect, const int actual)
 {
-    return expect == actual;
+    log_push_indent(LOG_STDOUT | LOG_TEST);
+    log_msg(LOG_STDOUT | LOG_TEST, "Test integer equal");
+    log_format_msg(LOG_STDOUT | LOG_TEST, "Expect: %d", expect);
+    log_format_msg(LOG_STDOUT | LOG_TEST, "Actual: %d", actual);
+    bool success = expect == actual;
+    log_pop_indent(LOG_STDOUT | LOG_TEST);
+    return success;
 }
 
 bool test_assert_equal_bool(const bool expect, const bool actual)
 {
-    return expect == actual;
+    log_push_indent(LOG_STDOUT | LOG_TEST);
+    log_msg(LOG_STDOUT | LOG_TEST, "Test bool equal");
+    log_format_msg(LOG_STDOUT | LOG_TEST, "Expect: %s", expect ? "true" : "false");
+    log_format_msg(LOG_STDOUT | LOG_TEST, "Actual: %s", actual ? "true" : "false");
+    bool success = expect == actual;
+    log_pop_indent(LOG_STDOUT | LOG_TEST);
+    return success;
 }
 
 bool test_assert_not_null(void* value)
 {
-    return value != NULL;
+    log_push_indent(LOG_STDOUT | LOG_TEST);
+    log_msg(LOG_STDOUT | LOG_TEST, "Test pointer not null");
+    bool success = value != NULL;
+    log_pop_indent(LOG_STDOUT | LOG_TEST);
+    return success;
 }
 
 bool test_assert_null(void* value)
 {
-    return value == NULL;
+    log_push_indent(LOG_STDOUT | LOG_TEST);
+    log_msg(LOG_STDOUT | LOG_TEST, "Test pointer is null");
+    bool success = value == NULL;
+    log_pop_indent(LOG_STDOUT | LOG_TEST);
+    return success;
 }
 
 void test_run_test_block(const char* block_name, test_func func)
