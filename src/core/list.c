@@ -44,6 +44,83 @@ static inline void _remove_node(struct List* list, struct ListNode* node)
     --list->count;
 }
 
+static struct ListNode* _node_at(struct List* list, int index)
+{
+    struct ListNode* node = list->head;
+
+    while(index != 0)
+    {
+        node = node->next;
+        --index;
+    }
+
+    return node;
+}
+
+static struct ListNode* _remove_range(struct List* from, int start, int count)
+{
+    struct ListNode* from_start = _node_at(from, start);
+    struct ListNode* from_end = _node_at(from, start + count - 1);
+
+    if(from_start->prev)
+    {
+        from_start->prev->next = from_end->next;
+    }
+    else
+    {
+        from->head = from_start->next;
+        from->head->prev = NULL;
+    }
+
+    if(from_end->next)
+    {
+        from_end->next->prev = from_start->prev;
+    }
+    else
+    {
+        from->tail = from_end->prev;
+        from->tail->next = NULL;
+    }
+
+    from_start->prev = NULL;
+    from_end->next   = NULL;
+
+    from->count -= count;
+
+    return from_start;
+}
+
+static void _add_range(struct List* to, int start, int count, struct ListNode* range_start_node, struct ListNode* range_end_node)
+{
+    struct ListNode* to_start = _node_at(to, start);
+
+    if(!to_start) // Empty list
+    {
+        to->head = range_start_node;
+        to->tail = range_end_node;
+    }
+    else
+    {
+        // Link in the new range
+        // No need to update head because we cannot insert before the head right now
+        range_start_node->prev = to_start;
+        range_end_node->next = to_start->next;
+
+        if(to_start->next)
+        {
+            to_start->next->prev = range_end_node;
+        }
+        else // Tail
+        {
+            to->tail = range_end_node;
+        }
+
+        to_start->next = range_start_node;
+    }
+
+    to->count += count;
+}
+
 struct List* list_new(void)
 {
     struct List* list = (struct List*)malloc(sizeof(struct List));
@@ -162,8 +239,26 @@ void list_splice_node(struct List* list_from, struct List* list_to, struct ListN
     }
 
     _remove_node(list_from, node);
-
     _add_node(list_to, node);
+}
+
+void list_splice(struct List* list_from, struct List* list_to, int from_start, int to_start, int count)
+{
+    if(count <= 0)
+    {
+        return;
+    }
+
+    struct ListNode* removed_start = _remove_range(list_from, from_start, count);
+    struct ListNode* removed_end = removed_start;
+    int tmp = count-1;
+    while(tmp != 0)
+    {
+        removed_end = removed_end->next;
+        --tmp;
+    }
+
+    _add_range(list_to, to_start, count, removed_start, removed_end);
 }
 
 void list_insert_after(struct List* list, void* insert_this, struct ListNode* after_this)
