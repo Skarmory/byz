@@ -57,7 +57,7 @@ static struct ListNode* _node_at(struct List* list, int index)
     return node;
 }
 
-static struct ListNode* _remove_range(struct List* from, int start, int count)
+static struct List _remove_range(struct List* from, int start, int count)
 {
     struct ListNode* from_start = _node_at(from, start);
     struct ListNode* from_end = _node_at(from, start + count - 1);
@@ -68,8 +68,8 @@ static struct ListNode* _remove_range(struct List* from, int start, int count)
     }
     else
     {
-        from->head = from_start->next;
-        from->head->prev = NULL;
+        // from_start is head
+        from->head = from_end->next;
     }
 
     if(from_end->next)
@@ -78,8 +78,8 @@ static struct ListNode* _remove_range(struct List* from, int start, int count)
     }
     else
     {
-        from->tail = from_end->prev;
-        from->tail->next = NULL;
+        // from_end is tail
+        from->tail = from_start->prev;
     }
 
     from_start->prev = NULL;
@@ -87,7 +87,13 @@ static struct ListNode* _remove_range(struct List* from, int start, int count)
 
     from->count -= count;
 
-    return from_start;
+    struct List ret;
+    list_init(&ret);
+    ret.head = from_start;
+    ret.tail = from_end;
+    ret.count = count;
+
+    return ret;
 }
 
 static void _add_range(struct List* to, int start, int count, struct ListNode* range_start_node, struct ListNode* range_end_node)
@@ -102,20 +108,20 @@ static void _add_range(struct List* to, int start, int count, struct ListNode* r
     else
     {
         // Link in the new range
-        // No need to update head because we cannot insert before the head right now
-        range_start_node->prev = to_start;
-        range_end_node->next = to_start->next;
+        // This inserts the range at the "start" index
+        range_start_node->prev = to_start->prev;
+        range_end_node->next = to_start;
 
-        if(to_start->next)
+        if(to_start->prev)
         {
-            to_start->next->prev = range_end_node;
+            to_start->prev->next = range_start_node;
         }
-        else // Tail
+        else
         {
-            to->tail = range_end_node;
+            to->head = range_start_node;
         }
 
-        to_start->next = range_start_node;
+        to_start->prev = range_end_node;
     }
 
     to->count += count;
@@ -249,16 +255,9 @@ void list_splice(struct List* list_from, struct List* list_to, int from_start, i
         return;
     }
 
-    struct ListNode* removed_start = _remove_range(list_from, from_start, count);
-    struct ListNode* removed_end = removed_start;
-    int tmp = count-1;
-    while(tmp != 0)
-    {
-        removed_end = removed_end->next;
-        --tmp;
-    }
+    struct List removed = _remove_range(list_from, from_start, count);
 
-    _add_range(list_to, to_start, count, removed_start, removed_end);
+    _add_range(list_to, to_start, count, removed.head, removed.tail);
 }
 
 void list_insert_after(struct List* list, void* insert_this, struct ListNode* after_this)

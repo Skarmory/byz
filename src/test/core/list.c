@@ -395,6 +395,11 @@ bool _test_list_splice_range_to_empty_list(void)
     const int expected_l2[] = { 3, 4, 5, 6, 7 };
     success &= _test_list_values(&el, expected_l2, 5);
 
+    success &= test_assert_not_null(lt.l1.head);
+    success &= test_assert_not_null(lt.l1.tail);
+    success &= test_assert_not_null(el.head);
+    success &= test_assert_not_null(el.tail);
+
     list_uninit(&el);
     uninit_test(&lt);
 
@@ -414,14 +419,42 @@ bool _test_list_splice_range_to_middle_of_list(void)
 
     success &= test_assert_equal_int(5, lt.l1.count);
     success &= test_assert_equal_int(15, lt.l2.count);
-    success &= test_assert_null(lt.l2.head->prev);
-    success &= test_assert_null(lt.l2.tail->next);
+    success &= test_assert_not_null(lt.l1.head);
+    success &= test_assert_not_null(lt.l1.tail);
+    success &= test_assert_not_null(lt.l2.head);
+    success &= test_assert_not_null(lt.l2.tail);
 
     const int expected_l1[] = { 0, 1, 2, 8, 9 };
     success &= _test_list_values(&lt.l1, expected_l1, 5);
 
-    const int expected_l2[] = { 0, 1, 2, 3, 4, 5, 6, 7, 3, 4, 5, 6, 7, 8, 9 };
+    const int expected_l2[] = { 0, 1, 2, 3, 4, 5, 6, 3, 4, 5, 6, 7, 7, 8, 9 };
     success &= _test_list_values(&lt.l2, expected_l2, 15);
+
+    uninit_test(&lt);
+
+    return success;
+}
+
+bool _test_list_splice_range_all_to_other_list(void)
+{
+    bool success = true;
+
+    struct ListTest lt = init_test();
+
+    success &= test_assert_equal_int(10, lt.l1.count);
+    success &= test_assert_equal_int(10, lt.l2.count);
+
+    list_splice(&lt.l1, &lt.l2, 0, 7, 10);
+
+    success &= test_assert_equal_int(0, lt.l1.count);
+    success &= test_assert_equal_int(20, lt.l2.count);
+    success &= test_assert_null(lt.l1.head);
+    success &= test_assert_null(lt.l1.tail);
+    success &= test_assert_not_null(lt.l2.head);
+    success &= test_assert_not_null(lt.l2.tail);
+
+    const int expected_l2[] = { 0, 1, 2, 3, 4, 5, 6, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 7, 8, 9 };
+    success &= _test_list_values(&lt.l2, expected_l2, sizeof(expected_l2) / sizeof(int));
 
     uninit_test(&lt);
 
@@ -436,6 +469,7 @@ bool test_list_splicing(void)
     success &= test_run_test("splice node to not empty list", &_test_list_splice_node_to_non_empty_list);
     success &= test_run_test("splice range to empty list", &_test_list_splice_range_to_empty_list);
     success &= test_run_test("splice range to not empty list", &_test_list_splice_range_to_middle_of_list);
+    success &= test_run_test("splice range all to not empty list", &_test_list_splice_range_all_to_other_list);
 
     return success;
 }
