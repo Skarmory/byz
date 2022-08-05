@@ -24,8 +24,6 @@ static void _thread_free_task(struct _Thread* thread);
 static void _thread_stop(struct _Thread* thread);
 static int  _thread_update(struct _Thread* thread);
 
-static void _task_free_wrapper(void* task);
-
 enum _ThreadState
 {
     THREAD_STATE_EXECUTING,
@@ -143,7 +141,6 @@ static void _thread_end_task(struct _Thread* thread)
         thread->task->cb_func(thread->task->args);
     }
 
-    _thread_free_task(thread);
     --thread->tasker->executing_task_count;
 
     thread->state = THREAD_STATE_IDLE;
@@ -206,11 +203,6 @@ thread_update_exit_label:
     thrd_exit(0);
 }
 
-static void _task_free_wrapper(void* task)
-{
-    task_free((struct Task*)task);
-}
-
 // GLOBAL FUNCS
 
 /**
@@ -257,8 +249,8 @@ void tasker_free(struct Tasker* tasker)
     mtx_destroy(&tasker->complete_list_lock);
     cnd_destroy(&tasker->work_signal);
 
-    list_free_data(&tasker->pending_list, &_task_free_wrapper);
-    list_free_data(&tasker->complete_list, &_task_free_wrapper);
+    list_free_data(&tasker->pending_list, &task_free_wrapper);
+    list_free_data(&tasker->complete_list, &task_free_wrapper);
 
     free(tasker);
 }
@@ -363,19 +355,18 @@ struct Task* task_new(char* task_name, task_func func, task_func cb_func, void* 
 }
 
 /**
- * Destroy a task.
+ * Await a task finish and destroy it.
  */
-bool task_free(struct Task* task)
+void task_free(struct Task* task)
 {
-    if(task->status == TASK_STATUS_EXECUTING)
-    {
-        return false;
-    }
-
+    task_await(task);
     free(task->args);
     free(task);
+}
 
-    return true;
+void task_free_wrapper(void* task)
+{
+    task_free((struct Task*)task);
 }
 
 /**
@@ -392,4 +383,12 @@ task_func task_get_func(struct Task* task)
 bool task_is_finished(struct Task* task)
 {
     return task->status == TASK_STATUS_SUCCESS || task->status == TASK_STATUS_FAILED;
+}
+
+void task_await(struct Task* task)
+{
+    while(!task_is_finished(task))
+    {
+        thrd_yield();
+    }
 }
