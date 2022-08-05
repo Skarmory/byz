@@ -25,7 +25,7 @@ void uninit_logs(void);
 void log_msg(LogChannels channels, const char* msg);
 void log_format_msg(LogChannels channels, const char* format, ...);
 void log_scheck_fail(const char* msg);
-void log_push_indent(enum LogChannelID id);
-void log_pop_indent(enum LogChannelID id);
+void log_push_indent(LogChannels channels);
+void log_pop_indent(LogChannels channels);
 
 #endif

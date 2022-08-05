@@ -112,15 +112,60 @@ void uninit_logs(void)
     fclose(s_log_channels[LOG_ID_TEST].file);
 }
 
-void log_push_indent(enum LogChannelID id)
+void log_push_indent(LogChannels channels)
 {
-    ++s_log_channels[id].indent;
+    if(bit_flags_has_flags(channels, LOG_MSGHIST))
+    {
+        ++s_log_channels[LOG_ID_MSGHIST].indent;
+    }
+
+    if(bit_flags_has_flags(channels, LOG_DEBUG))
+    {
+        ++s_log_channels[LOG_ID_DEBUG].indent;
+    }
+
+    if(bit_flags_has_flags(channels, LOG_TEST))
+    {
+        ++s_log_channels[LOG_ID_TEST].indent;
+    }
+
+    if(bit_flags_has_flags(channels, LOG_STDOUT))
+    {
+        ++s_log_channels[LOG_ID_STDOUT].indent;
+    }
 }
 
-void log_pop_indent(enum LogChannelID id)
+void log_pop_indent(LogChannels channels)
 {
-    if(s_log_channels[id].indent > 0)
+    if(bit_flags_has_flags(channels, LOG_MSGHIST))
     {
-        --s_log_channels[id].indent;
+        if(s_log_channels[LOG_ID_MSGHIST].indent > 0)
+        {
+            --s_log_channels[LOG_ID_MSGHIST].indent;
+        }
+    }
+
+    if(bit_flags_has_flags(channels, LOG_DEBUG))
+    {
+        if(s_log_channels[LOG_ID_DEBUG].indent > 0)
+        {
+            --s_log_channels[LOG_ID_DEBUG].indent;
+        }
+    }
+
+    if(bit_flags_has_flags(channels, LOG_TEST))
+    {
+        if(s_log_channels[LOG_ID_TEST].indent > 0)
+        {
+            --s_log_channels[LOG_ID_TEST].indent;
+        }
+    }
+
+    if(bit_flags_has_flags(channels, LOG_STDOUT))
+    {
+        if(s_log_channels[LOG_ID_STDOUT].indent > 0)
+        {
+            --s_log_channels[LOG_ID_STDOUT].indent;
+        }
     }
 }
