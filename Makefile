@@ -44,5 +44,6 @@ clean:
 
 fullclean: clean
 	@rm -f $(GAME)
+	@rm -f $(GAME_TEST)
 
 -include $(DEPS)
