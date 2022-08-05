@@ -18,6 +18,7 @@ struct Mon;
 enum MapCellLoadState
 {
     MAP_CELL_LOADED,
+    MAP_CELL_LOADING,
     MAP_CELL_UNLOADED
 };
 

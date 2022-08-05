@@ -139,8 +139,6 @@ struct List* poisson_disk(int width, int height, struct RNG* rng)
 
     log_format_msg(LOG_DEBUG, "Added %d poisson disks", add);
 
-    _dbg_print_occupancy(&poisson_disk_grid);
-
     free(poisson_disk_grid.occupancy);
     list_uninit(&proc_list);
     return ret_list;

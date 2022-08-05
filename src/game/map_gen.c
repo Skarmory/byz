@@ -446,6 +446,8 @@ static int _gen_map_cell_task_func(void* args)
 
 struct Task* gen_map_cell_async(struct Map* map, struct MapCell* cell)
 {
+    cell->load_state = MAP_CELL_LOADING;
+
     struct _gen_map_cell_TaskArgs args;
     args.map = map;
     args.cell = cell;

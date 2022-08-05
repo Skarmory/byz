@@ -170,8 +170,8 @@ static struct List _load_cells_around_region(struct Map* map, int rx, int ry)
     struct List new_tasks;
     list_init(&new_tasks);
 
-    for(int x = (rx - 10); x < (rx + 10); ++x)
-    for(int y = (ry - 10); y < (ry + 10); ++y)
+    for(int x = (rx - 5); x < (rx + 5); ++x)
+    for(int y = (ry - 5); y < (ry + 5); ++y)
     {
         struct MapCell* cell = map_get_cell_by_cell_coord(map, x, y);
         if(cell && cell->load_state == MAP_CELL_UNLOADED)
@@ -183,9 +183,9 @@ static struct List _load_cells_around_region(struct Map* map, int rx, int ry)
     return new_tasks;
 }
 
-static void _handle_cursor_move(struct EmbarkScreen* embark_screen, enum Command cmd)
+static void _handle_cursor_move(struct EmbarkScreen* es, enum Command cmd)
 {
-    struct EmbarkScreenGroup* group = _get_focussed_group(embark_screen);
+    struct EmbarkScreenGroup* group = _get_focussed_group(es);
 
     int x_off = 0;
     int y_off = 0;
@@ -209,16 +209,16 @@ static void _handle_cursor_move(struct EmbarkScreen* embark_screen, enum Command
     {
         // Not in camera bounds, check to see if the camera can move
         bool camera_can_move = true;
-        if(!embark_screen->focus_regional)
+        if(!es->focus_regional)
         {
-            camera_can_move = map_in_bounds_cell(embark_screen->map, group->camera.x + x_off, group->camera.y + y_off) &&
-                              map_in_bounds_cell(embark_screen->map, camera_max_x(&group->camera) + x_off, camera_max_y(&group->camera) + y_off);
+            camera_can_move = map_in_bounds_cell(es->map, group->camera.x + x_off, group->camera.y + y_off) &&
+                              map_in_bounds_cell(es->map, camera_max_x(&group->camera) + x_off, camera_max_y(&group->camera) + y_off);
 
         }
         else
         {
-            camera_can_move = map_in_bounds(embark_screen->map, group->camera.x + x_off, group->camera.y + y_off) &&
-                              map_in_bounds(embark_screen->map, camera_max_x(&group->camera) + x_off, camera_max_y(&group->camera) + y_off);
+            camera_can_move = map_in_bounds(es->map, group->camera.x + x_off, group->camera.y + y_off) &&
+                              map_in_bounds(es->map, camera_max_x(&group->camera) + x_off, camera_max_y(&group->camera) + y_off);
         }
 
         if(camera_can_move)
@@ -228,14 +228,15 @@ static void _handle_cursor_move(struct EmbarkScreen* embark_screen, enum Command
         }
     }
 
-    if(!embark_screen->focus_regional)
+    if(!es->focus_regional)
     {
         int wx = -1;
         int wy = -1;
-        _group_cursor_to_world(&embark_screen->world_group, &wx, &wy);
+        _group_cursor_to_world(&es->world_group, &wx, &wy);
 
-        struct MapCell* cell = map_get_cell_by_cell_coord(embark_screen->map, wx, wy);
-        _load_cells_around_region(embark_screen->map, wx, wy);
+        struct MapCell* cell = map_get_cell_by_cell_coord(es->map, wx, wy);
+        struct List new_tasks = _load_cells_around_region(es->map, wx, wy);
+        list_splice(&new_tasks, &es->gen_tasks, 0, maxu(es->gen_tasks.count-1, 0), new_tasks.count);
     }
 }
 
@@ -507,7 +508,7 @@ void embark_screen_draw(struct EmbarkScreen* es)
     int wy = -1;
     _group_cursor_to_world(&es->world_group, &wx, &wy);
     struct MapCell* current_cell = map_get_cell_by_cell_coord(es->map, wx, wy);
-    if(!current_cell || current_cell->load_state == MAP_CELL_UNLOADED)
+    if(!current_cell || current_cell->load_state != MAP_CELL_LOADED)
     {
         _await_load_tasks(&es->gen_tasks);
     }
