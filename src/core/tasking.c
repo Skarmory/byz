@@ -10,7 +10,7 @@
 #include <threads.h>
 #include <time.h>
 
-#define MAX_THREADS 4
+#define MAX_THREADS 8
 
 struct Tasker* g_tasker = NULL;
 

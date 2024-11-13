@@ -1,6 +1,6 @@
 CC=gcc
-CFLAGS=-Wall -Wextra -Iinclude
-LDFLAGS=-lm -pthread
+CFLAGS=-Wall -Wextra -Iinclude -isystem ../scieppend/include
+LDFLAGS=-lm -lscieppend -pthread
 
 GAME=byzantium
 GAME_SRCS=$(wildcard src/core/*.c src/game/*.c src/ui/*.c)

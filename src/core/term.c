@@ -431,15 +431,15 @@ void term_init(void)
 
 void term_draw_symbol(int x, int y, struct Colour* fg, struct Colour* bg, TextAttributeFlags ta_flags, char symbol)
 {
-    if(!fg) fg = &c_default_colour;
-    if(!bg) bg = &c_default_colour;
+    //if(!fg) fg = &c_default_colour;
+    //if(!bg) bg = &c_default_colour;
 
     struct VTermSymbol* sym = _term_get_symbol(x, y);
     if(_should_redraw(sym, symbol, fg, bg, ta_flags))
     {
         sym->symbol = symbol;
-        sym->fg = *fg;
-        sym->bg = *bg;
+        if(fg) sym->fg = *fg;
+        if(bg) sym->bg = *bg;
         sym->ta_flags = ta_flags;
         sym->redraw = true;
     }

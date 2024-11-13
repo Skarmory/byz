@@ -48,6 +48,7 @@
 #include "core/term.h"
 #include "core/string.h"
 #include "game/camera.h"
+#include "game/embark.h"
 #include "game/gameplay_commands.h"
 #include "game/globals.h"
 #include "game/init.h"
@@ -71,7 +72,7 @@ enum GameState
 struct anonymous
 {
     enum GameState game_state;
-    struct EmbarkScreen* embark_screen;
+    struct Embark* embark;
 } anon;
 
 //struct MAP_SCREEN* screen;
@@ -117,7 +118,7 @@ static bool handle_input()
 
     if(anon.game_state == GAME_STATE_EMBARK)
     {
-        if(embark_screen_handle(anon.embark_screen, input))
+        if(embark_update(anon.embark, input))
         {
             return NO_QUIT;
         }
@@ -139,7 +140,7 @@ static void handle_draw()
 {
     if(anon.game_state == GAME_STATE_EMBARK)
     {
-        embark_screen_draw(anon.embark_screen);
+        embark_draw(anon.embark);
     }
 }
 
@@ -201,7 +202,7 @@ int run(void)
     }
     gen_map(g_cmap);
 
-    anon.embark_screen = embark_screen_new(g_cmap);
+    anon.embark = embark_new(g_cmap);
 
     do
     {
@@ -226,7 +227,7 @@ int run(void)
     }
     while(!quit);
 
-    embark_screen_free(anon.embark_screen);
+    embark_free(anon.embark);
     map_free(g_cmap);
     free(g_camera);
 

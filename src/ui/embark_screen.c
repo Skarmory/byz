@@ -1,11 +1,11 @@
 #include "ui/embark_screen.h"
 
+#include "core/cursor.h"
 #include "core/geom.h"
 #include "core/math_utils.h"
 #include "core/tasking.h"
 #include "core/term.h"
 
-#include "game/camera.h"
 #include "game/map.h"
 #include "game/map_cell.h"
 #include "game/map_gen.h"
@@ -15,30 +15,22 @@
 
 #include <stdio.h>
 
-enum Command
+enum EmbarkCommand
 {
-    CURSOR_LEFT = KEYCODE_h,
+    CURSOR_LEFT  = KEYCODE_h,
     CURSOR_RIGHT = KEYCODE_l,
-    CURSOR_DOWN = KEYCODE_j,
-    CURSOR_UP = KEYCODE_k,
-    FOCUS_LEFT = KEYCODE_H,
-    FOCUS_RIGHT = KEYCODE_L,
+    CURSOR_DOWN  = KEYCODE_j,
+    CURSOR_UP    = KEYCODE_k,
+    FOCUS_LEFT   = KEYCODE_H,
+    FOCUS_RIGHT  = KEYCODE_L,
     INVALID
-};
-
-struct Container
-{
-    int x;
-    int y;
-    int w;
-    int h;
 };
 
 struct EmbarkScreenGroup
 {
     struct Container region;
     struct Cursor cursor;
-    struct camera camera;
+    struct camera* camera;
 };
 
 struct EmbarkScreen
@@ -52,8 +44,6 @@ struct EmbarkScreen
 
     bool focus_regional;
     enum MapLayer layer;
-
-    struct List gen_tasks;
 };
 
 static void _debug_draw_group(struct EmbarkScreenGroup* group)
@@ -74,7 +64,7 @@ static void _debug_draw_group(struct EmbarkScreenGroup* group)
 
     int world_x = -1;
     int world_y = -1;
-    camera_relative_to_world(&group->camera, local_x, local_y, &world_x, &world_y);
+    camera_relative_to_world(group->camera, local_x, local_y, &world_x, &world_y);
     snprintf(buffer, max_width, "Cursor (world):  (%d, %d)", world_x, world_y);
     term_draw_text(text_start_x, text_start_y, COL(CLR_WHITE), COL(CLR_DEFAULT), A_BOLD_BIT, buffer);
 }
@@ -83,41 +73,6 @@ static void _debug_draw(struct EmbarkScreen* embark_screen)
 {
     _debug_draw_group(&embark_screen->world_group);
     _debug_draw_group(&embark_screen->regional_group);
-}
-
-static void _cursor_move_get_offset(enum Command cmd, int* restrict xoff, int* restrict yoff)
-{
-    *xoff = 0;
-    *yoff = 0;
-
-    switch(cmd)
-    {
-        case CURSOR_LEFT:
-        {
-            *xoff = -1;
-            break;
-        }
-
-        case CURSOR_RIGHT:
-        {
-            *xoff = 1;
-            break;
-        }
-
-        case CURSOR_DOWN:
-        {
-            *yoff = 1;
-            break;
-        }
-
-        case CURSOR_UP:
-        {
-            *yoff = -1;
-            break;
-        }
-
-        default: break;
-    }
 }
 
 static struct EmbarkScreenGroup* _get_focussed_group(struct EmbarkScreen* embark_screen)
@@ -132,116 +87,32 @@ static struct EmbarkScreenGroup* _get_focussed_group(struct EmbarkScreen* embark
     }
 }
 
-static void _group_cursor_to_world(struct EmbarkScreenGroup* group, int* out_wx, int* out_wy)
-{
-    // Convert cursor screen-space to camera-space
-    math_change_basis(group->cursor.x, group->cursor.y, group->region.x, group->region.y, 0, 0, out_wx, out_wy);
-
-    // Convert camera-space to world-space
-    camera_relative_to_world(&group->camera, *out_wx, *out_wy, out_wx, out_wy);
-}
-
-static struct MapCell* _current_world_map_cell(struct EmbarkScreen* es)
-{
-    int wx = -1;
-    int wy = -1;
-
-    _group_cursor_to_world(&es->world_group, &wx, &wy);
-
-    struct MapCell* cell = map_get_cell_by_cell_coord(es->map, wx, wy);
-    return cell;
-}
-
-static struct MapLocation* _current_regional_map_loc(struct EmbarkScreen* es)
-{
-    int wx = -1;
-    int wy = -1;
-
-    struct MapCell* cell = _current_world_map_cell(es);
-
-    _group_cursor_to_world(&es->regional_group, &wx, &wy);
-
-    struct MapLocation* loc = map_cell_get_location_relative(cell, wx, wy);
-    return loc;
-}
-
-static struct List _load_cells_around_region(struct Map* map, int rx, int ry)
-{
-    struct List new_tasks;
-    list_init(&new_tasks);
-
-    for(int x = (rx - 5); x < (rx + 5); ++x)
-    for(int y = (ry - 5); y < (ry + 5); ++y)
-    {
-        struct MapCell* cell = map_get_cell_by_cell_coord(map, x, y);
-        if(cell && cell->load_state == MAP_CELL_UNLOADED)
-        {
-            list_add(&new_tasks, gen_map_cell_async(map, cell));
-        }
-    }
-
-    return new_tasks;
-}
-
-static void _handle_cursor_move(struct EmbarkScreen* es, enum Command cmd)
+static void _handle_cursor_move(struct EmbarkScreen* es, enum EmbarkCommand cmd)
 {
     struct EmbarkScreenGroup* group = _get_focussed_group(es);
 
     int x_off = 0;
     int y_off = 0;
-    _cursor_move_get_offset(cmd, &x_off, &y_off);
+    cursor_get_offset((enum KeyCode)cmd, &x_off, &y_off);
 
     // Cursor cannot move because it will go out of region bounds.
-    //const bool cursor_no_move = _does_region_constrain_cursor(group, x_off, y_off);
     const bool cursor_no_move = !geom_point_in_rect(group->cursor.x + x_off, group->cursor.y + y_off, group->region.x, group->region.y, group->region.w, group->region.h);
 
-    int world_x = -1;
-    int world_y = -1;
-    _group_cursor_to_world(group, &world_x, &world_y);
+    //int world_x = -1;
+    //int world_y = -1;
+    //_group_cursor_to_world(group, &world_x, &world_y);
 
-    if(!cursor_no_move && camera_in_bounds(&group->camera, world_x + x_off, world_y + y_off))
+    if(!cursor_no_move/* && camera_in_bounds(&group->camera, world_x + x_off, world_y + y_off)*/)
     {
         // In camera bounds
         group->cursor.x += x_off;
         group->cursor.y += y_off;
     }
-    else
-    {
-        // Not in camera bounds, check to see if the camera can move
-        bool camera_can_move = true;
-        if(!es->focus_regional)
-        {
-            camera_can_move = map_in_bounds_cell(es->map, group->camera.x + x_off, group->camera.y + y_off) &&
-                              map_in_bounds_cell(es->map, camera_max_x(&group->camera) + x_off, camera_max_y(&group->camera) + y_off);
-
-        }
-        else
-        {
-            camera_can_move = map_in_bounds(es->map, group->camera.x + x_off, group->camera.y + y_off) &&
-                              map_in_bounds(es->map, camera_max_x(&group->camera) + x_off, camera_max_y(&group->camera) + y_off);
-        }
-
-        if(camera_can_move)
-        {
-            group->camera.x += x_off;
-            group->camera.y += y_off;
-        }
-    }
-
-    if(!es->focus_regional)
-    {
-        int wx = -1;
-        int wy = -1;
-        _group_cursor_to_world(&es->world_group, &wx, &wy);
-
-        struct MapCell* cell = map_get_cell_by_cell_coord(es->map, wx, wy);
-        struct List new_tasks = _load_cells_around_region(es->map, wx, wy);
-        list_splice(&new_tasks, &es->gen_tasks, 0, maxu(es->gen_tasks.count-1, 0), new_tasks.count);
-    }
 }
 
-static void _handle_focus_switch(struct EmbarkScreen* embark_screen, enum Command cmd)
+static void _handle_focus_switch(struct EmbarkScreen* embark_screen, enum EmbarkCommand cmd)
 {
+    (void)cmd;
     embark_screen->focus_regional = !embark_screen->focus_regional;
 }
 
@@ -256,115 +127,6 @@ static void _draw_container(struct Container* container)
             COL(CLR_FOG_OF_WAR),
             A_NONE_BIT,
             ' ');
-}
-
-static void _await_load_tasks(struct List* gen_tasks_list)
-{
-    struct ListNode* n = NULL;
-    list_for_each(gen_tasks_list, n)
-    {
-        task_await((struct Task*)n->data);
-    }
-
-    list_free_data(gen_tasks_list, &task_free_wrapper);
-}
-
-struct EmbarkScreen* embark_screen_new(struct Map* world_map)
-{
-    int screen_width = 0;
-    int screen_height = 0;
-    term_get_wh(&screen_width, &screen_height);
-
-    struct EmbarkScreen* es = malloc(sizeof(struct EmbarkScreen));
-
-    int container_space = screen_width;
-
-    list_init(&es->gen_tasks);
-
-    // Split the screen into regions to display to display camera views in
-    es->world_group.region.x = 0;
-    es->world_group.region.y = 1;
-    es->world_group.region.w = screen_width / 3;
-    es->world_group.region.h = screen_height - 1;
-
-    container_space -= es->world_group.region.w + 1;
-
-    es->regional_group.region.x = screen_width / 3 + 1; // Add column of padding
-    es->regional_group.region.y = 1;
-    es->regional_group.region.w = screen_width / 3 - 1; // Account for column of padding
-    es->regional_group.region.h = screen_height - 1;
-
-    container_space -= es->regional_group.region.w + 1;
-
-    es->info_container.x = screen_width - container_space;
-    es->info_container.y = 1;
-    es->info_container.w = container_space;
-    es->info_container.h = screen_height - 1;
-
-    // Create cameras to display world and regional map views
-    es->world_group.camera.x = 0;
-    es->world_group.camera.y = 0;
-    es->world_group.camera.w = minu(es->world_group.region.w, world_map->width);
-    es->world_group.camera.h = minu(es->world_group.region.h, world_map->height);
-
-    es->regional_group.camera.x = 0;
-    es->regional_group.camera.y = 0;
-    es->regional_group.camera.w = minu(es->regional_group.region.w, g_map_cell_width);
-    es->regional_group.camera.h = minu(es->regional_group.region.h, g_map_cell_height);
-
-    // Set cursors to region origins
-    es->world_group.cursor.x  = es->world_group.region.x;
-    es->world_group.cursor.y  = es->world_group.region.y;
-    es->regional_group.cursor.x = es->regional_group.region.x;
-    es->regional_group.cursor.y = es->regional_group.region.y;
-
-    // Start off with the cursor focus on the world map
-    es->focus_regional = false;
-    es->layer = MAP_LAYER_NORMAL;
-
-    es->map = world_map;
-
-    struct MapCell* cell = _current_world_map_cell(es);
-    struct List new_tasks = _load_cells_around_region(world_map, cell->cell_x, cell->cell_y);
-    list_splice(&new_tasks, &es->gen_tasks, 0, maxu(es->gen_tasks.count-1, 0), new_tasks.count);
-
-    _draw_container(&es->world_group.region);
-    _draw_container(&es->regional_group.region);
-    _draw_container(&es->info_container);
-
-    return es;
-}
-
-void embark_screen_free(struct EmbarkScreen* es)
-{
-    _await_load_tasks(&es->gen_tasks);
-    free(es);
-}
-
-bool embark_screen_handle(struct EmbarkScreen* embark_screen, enum KeyCode input)
-{
-    enum Command cmd = (enum Command)input;
-    switch(cmd)
-    {
-        case CURSOR_LEFT:
-        case CURSOR_RIGHT:
-        case CURSOR_DOWN:
-        case CURSOR_UP:
-        {
-            _handle_cursor_move(embark_screen, cmd);
-            return true;
-        }
-
-        case FOCUS_LEFT:
-        case FOCUS_RIGHT:
-        {
-            _handle_focus_switch(embark_screen, cmd);
-            return true;
-        }
-
-        default:
-            return false;
-    }
 }
 
 static void _draw_location(int screen_i, int screen_j, struct MapLocation* map_location, enum MapLayer layer)
@@ -417,22 +179,30 @@ static void _draw_location(int screen_i, int screen_j, struct MapLocation* map_l
     }
 }
 
-static void _draw_world_view_map(struct EmbarkScreenGroup* group, struct Map* map, enum MapLayer layer)
+static void _draw_container_title(const char* title, int title_len, struct Container* container)
+{
+    term_draw_text(container->x + (container->w / 2) - (title_len / 2), 0, COL(CLR_WHITE), COL(CLR_DEFAULT), A_NONE_BIT, title);
+}
+
+void embark_screen_draw_world_map(struct EmbarkScreen* es, struct Map* map, struct camera* camera)
 {
     int world_x = 0;
     int world_y = 0;
 
-    const char* title = "World Map";
-    const int title_len_half = 5;
+    struct Container* container = &es->world_group.region;
+    //const char* title = "World Map";
+    //const int title_len_half = 5;
+    //term_draw_text((group->region.w / 2) - title_len_half, 0, COL(CLR_WHITE), COL(CLR_DEFAULT), A_NONE_BIT, title);
 
-    term_draw_text((group->region.w / 2) - title_len_half, 0, COL(CLR_WHITE), COL(CLR_DEFAULT), A_NONE_BIT, title);
+    _draw_container_title("World Map", 10, container);
 
-    for(int screen_x = group->region.x, rel_x = 0; screen_x < group->region.x + group->region.w; ++screen_x, ++rel_x)
-    for(int screen_y = group->region.y, rel_y = 0; screen_y < group->region.y + group->region.h; ++screen_y, ++rel_y)
+    for(int screen_x = container->x, rel_x = 0; screen_x < container->x + container->w; ++screen_x, ++rel_x)
+    for(int screen_y = container->y, rel_y = 0; screen_y < container->y + container->h; ++screen_y, ++rel_y)
     {
-        if(camera_relative_to_world(&group->camera, rel_x, rel_y, &world_x, &world_y))
+        if(camera_relative_to_world(camera, rel_x, rel_y, &world_x, &world_y))
         {
             struct MapCell* cell = map_get_cell_by_cell_coord(map, world_x, world_y);
+
             if(cell)
             {
                 term_draw_symbol(screen_x, screen_y, &cell->symbol.fg, &cell->symbol.bg, 0, cell->symbol.sym);
@@ -445,39 +215,40 @@ static void _draw_world_view_map(struct EmbarkScreenGroup* group, struct Map* ma
     }
 
     // Draw cursor
-    _group_cursor_to_world(group, &world_x, &world_y);
-    struct MapCell* cell = map_get_cell_by_cell_coord(map, world_x, world_y);
-    term_draw_symbol(group->cursor.x, group->cursor.y, COL(CLR_BLACK), &cell->symbol.bg, A_BLINK_BIT | A_BOLD_BIT, '@' );
+    //_group_cursor_to_world(group, &world_x, &world_y);
+    //struct MapCell* cell = map_get_cell_by_cell_coord(map, world_x, world_y);
+    term_draw_symbol(es->world_group.cursor.x, es->world_group.cursor.y, COL(CLR_BLACK), NULL, A_BLINK_BIT | A_BOLD_BIT, '@' );
 }
 
-static void _draw_regional_view_map(struct EmbarkScreenGroup* group, struct MapCell* cell, enum MapLayer layer)
+void embark_screen_draw_regional_map(struct EmbarkScreen* es, struct MapCell* region, struct camera* camera)
 {
     int world_x = 0;
     int world_y = 0;
     struct MapLocation* map_location = NULL;
+    struct Container* container = &es->regional_group.region;
 
-    const char* title = "Regional Map";
-    const int title_len_half = 6;
+    //const char* title = "Regional Map";
+    //const int title_len_half = 6;
+    //term_draw_text(es->regional_group.region.x + (es->regional_group.w / 2) - title_len_half, 0, COL(CLR_WHITE), COL(CLR_DEFAULT), A_NONE_BIT, title);
+    _draw_container_title("Regional Map", 12, container);
 
-    term_draw_text(group->region.x + (group->region.w / 2) - title_len_half, 0, COL(CLR_WHITE), COL(CLR_DEFAULT), A_NONE_BIT, title);
-
-    for(int screen_x = group->region.x, rel_x = 0; screen_x < group->region.x + group->region.w; ++screen_x, ++rel_x)
-    for(int screen_y = group->region.y, rel_y = 0; screen_y < group->region.y + group->region.h; ++screen_y, ++rel_y)
+    for(int screen_x = container->x, rel_x = 0; screen_x < container->x + container->w; ++screen_x, ++rel_x)
+    for(int screen_y = container->y, rel_y = 0; screen_y < container->y + container->h; ++screen_y, ++rel_y)
     {
-        if(camera_relative_to_world(&group->camera, rel_x, rel_y, &world_x, &world_y))
+        if(camera_relative_to_world(camera, rel_x, rel_y, &world_x, &world_y))
         {
-            map_location = map_cell_get_location_relative(cell, world_x, world_y);
-            _draw_location(screen_x, screen_y, map_location, layer); 
+            map_location = map_cell_get_location_relative(region, world_x, world_y);
+            _draw_location(screen_x, screen_y, map_location, es->layer); 
         }
     }
 
     // Draw cursor
-    _group_cursor_to_world(group, &world_x, &world_y);
-    map_location = map_cell_get_location_relative(cell, world_x, world_y);
-    term_draw_symbol(group->cursor.x, group->cursor.y, COL(CLR_BLACK), &map_location->symbol.bg, A_BLINK_BIT | A_BOLD_BIT, '@' );
+    //_group_cursor_to_world(group, &world_x, &world_y);
+    //map_location = map_cell_get_location_relative(cell, world_x, world_y);
+    term_draw_symbol(es->regional_group.cursor.x, es->regional_group.cursor.y, COL(CLR_BLACK), NULL, A_BLINK_BIT | A_BOLD_BIT, '@' );
 }
 
-static void _draw_info_view(struct EmbarkScreen* es)
+void embark_screen_draw_info_view(struct EmbarkScreen* es, void* info_data)
 {
     const char* title = "Location Info";
     const int title_len_half = 7;
@@ -487,7 +258,7 @@ static void _draw_info_view(struct EmbarkScreen* es)
 
     if(es->focus_regional)
     {
-        struct MapLocation* loc = _current_regional_map_loc(es);
+        struct MapLocation* loc = info_data;//_current_regional_map_loc(es);
 
         term_draw_ftext(es->info_container.x, 2, COL(CLR_WHITE), COL(CLR_DEFAULT), A_NONE_BIT, "Coordinates: %d, %d", loc->x, loc->y);
         term_draw_ftext(es->info_container.x, 3, COL(CLR_WHITE), COL(CLR_DEFAULT), A_NONE_BIT, "Biome: %s", biome_name_from_enum(loc->terrain.biome));
@@ -496,25 +267,136 @@ static void _draw_info_view(struct EmbarkScreen* es)
     }
     else
     {
-        struct MapCell* cell = _current_world_map_cell(es);
+        struct MapCell* cell = info_data;//_current_world_map_cell(es);
 
         term_draw_ftext(es->info_container.x, 2, COL(CLR_WHITE), COL(CLR_DEFAULT), A_NONE_BIT, "Coordinates: %d, %d", cell->cell_x, cell->cell_y);
     }
 }
 
-void embark_screen_draw(struct EmbarkScreen* es)
+struct EmbarkScreen* embark_screen_new(void)
 {
-    int wx = -1;
-    int wy = -1;
-    _group_cursor_to_world(&es->world_group, &wx, &wy);
-    struct MapCell* current_cell = map_get_cell_by_cell_coord(es->map, wx, wy);
-    if(!current_cell || current_cell->load_state != MAP_CELL_LOADED)
-    {
-        _await_load_tasks(&es->gen_tasks);
-    }
+    int screen_width = 0;
+    int screen_height = 0;
+    term_get_wh(&screen_width, &screen_height);
 
-    _draw_world_view_map(&es->world_group, es->map, es->layer);
-    _draw_regional_view_map(&es->regional_group, current_cell, es->layer);
-    _draw_info_view(es);
-    _debug_draw(es);
+    struct EmbarkScreen* es = malloc(sizeof(struct EmbarkScreen));
+
+    int container_space = screen_width;
+
+    // Split the screen into regions to display to display camera views in
+    es->world_group.region.x = 0;
+    es->world_group.region.y = 1;
+    es->world_group.region.w = screen_width / 3;
+    es->world_group.region.h = screen_height - 1;
+
+    container_space -= es->world_group.region.w + 1;
+
+    es->regional_group.region.x = screen_width / 3 + 1; // Add column of padding
+    es->regional_group.region.y = 1;
+    es->regional_group.region.w = screen_width / 3 - 1; // Account for column of padding
+    es->regional_group.region.h = screen_height - 1;
+
+    container_space -= es->regional_group.region.w + 1;
+
+    es->info_container.x = screen_width - container_space;
+    es->info_container.y = 1;
+    es->info_container.w = container_space;
+    es->info_container.h = screen_height - 1;
+
+    // Set cursors to region origins
+    es->world_group.cursor.x  = es->world_group.region.x;
+    es->world_group.cursor.y  = es->world_group.region.y;
+    es->regional_group.cursor.x = es->regional_group.region.x;
+    es->regional_group.cursor.y = es->regional_group.region.y;
+
+    // Start off with the cursor focus on the world map
+    es->focus_regional = false;
+    es->layer = MAP_LAYER_NORMAL;
+
+    _draw_container(&es->world_group.region);
+    _draw_container(&es->regional_group.region);
+    _draw_container(&es->info_container);
+
+    return es;
 }
+
+void embark_screen_free(struct EmbarkScreen* es)
+{
+    free(es);
+}
+
+bool embark_screen_world_map_focussed(struct EmbarkScreen* es)
+{
+    return !es->focus_regional;
+}
+
+bool embark_screen_regional_map_focussed(struct EmbarkScreen* es)
+{
+    return es->focus_regional;
+}
+
+struct Cursor embark_screen_get_cursor(struct EmbarkScreen* es)
+{
+    struct EmbarkScreenGroup* group = _get_focussed_group(es);
+    return group->cursor;
+}
+
+struct Cursor embark_screen_get_world_map_container_cursor(struct EmbarkScreen* es)
+{
+    return es->world_group.cursor;
+}
+
+struct Cursor embark_screen_get_regional_map_container_cursor(struct EmbarkScreen* es)
+{
+    return es->regional_group.cursor;
+}
+
+struct Container embark_screen_get_container(struct EmbarkScreen* es)
+{
+    struct EmbarkScreenGroup* group = _get_focussed_group(es);
+    return group->region;
+}
+
+struct Container embark_screen_get_world_map_container(struct EmbarkScreen* es)
+{
+    return es->world_group.region;
+}
+
+struct Container embark_screen_get_regional_map_container(struct EmbarkScreen* es)
+{
+    return es->regional_group.region;
+}
+
+bool embark_screen_update(struct EmbarkScreen* embark_screen, enum KeyCode input)
+{
+    enum EmbarkCommand cmd = (enum EmbarkCommand)input;
+    switch(cmd)
+    {
+        case CURSOR_LEFT:
+        case CURSOR_RIGHT:
+        case CURSOR_DOWN:
+        case CURSOR_UP:
+        {
+            _handle_cursor_move(embark_screen, cmd);
+            return true;
+        }
+
+        case FOCUS_LEFT:
+        case FOCUS_RIGHT:
+        {
+            _handle_focus_switch(embark_screen, cmd);
+            return true;
+        }
+
+        default:
+            return false;
+    }
+}
+
+//void embark_screen_draw(struct EmbarkScreen* es, struct Map* map)
+//{
+//    _draw_world_view_map(&es->world_group, es->map, es->layer);
+//    _draw_regional_view_map(&es->regional_group, es->layer);
+//    _draw_info_view(es);
+//    _debug_draw(es);
+//}
